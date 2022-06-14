@@ -3,6 +3,13 @@
 set -e
 
 ResourceIds="available_resource_ids.txt"
+vpcId=
+subnetId=
+internetGatewayId=
+routeTableId=
+securityGroupId=
+instanceId=
+instancePublicIp=
 
 # creates vpc with 172.22.0.0/16 cidr block and sends vpc id to ResourceIds file
 function createVPC () {
@@ -137,7 +144,8 @@ then
 	securityGroupId=$(cat $ResourceIds | head -5 | tail +5)
 	instanceId=$(cat $ResourceIds | head -6 | tail +6) 
 	aws ec2 terminate-instances --instance-ids $instanceId --output text > /dev/null
-	sleep 60
+	echo "Waiting for the termination of EC2..."
+	sleep 40
 	aws ec2 delete-security-group --group-id $securityGroupId
 	aws ec2 delete-subnet --subnet-id $subnetId
 	aws ec2 delete-route-table --route-table-id $routeTableId
@@ -145,7 +153,27 @@ then
 	aws ec2 delete-internet-gateway --internet-gateway-id $internetGatewayId
 	aws ec2 delete-vpc --vpc-id $vpcId
 	rm $ResourceIds
+elif [[ $1 = "--show-resources" ]]
+then
+	if [[ -f "$ResourceIds" ]]
+	then
+		vpcId=$(cat $ResourceIds | head -1)
+		subnetId=$(cat $ResourceIds | head -2 | tail +2)
+		internetGatewayId=$(cat $ResourceIds | head -3 | tail +3)
+		routeTableId=$(cat $ResourceIds | head -4 | tail +4)
+		securityGroupId=$(cat $ResourceIds | head -5 | tail +5)
+		instanceId=$(cat $ResourceIds | head -6 | tail +6)
+		instancePublicIp=$(cat $ResourceIds | head -7 | tail +7)
+		showResourceIds
+	else
+		echo "You do not have any resources"
+	fi
+elif [[ $1 = "--help" ]]
+then
+	echo "--create ->  creates VPC, Subnet, Internet Gateway, Route Table, Security Group and EC2 Instance"
+	echo "--purge -> deletes all the created resources"
+	echo "--show-resources -> shows all the available resources"
 else
-	echo "You can use --create flag to create ec2 instance"
-	echo "Or --purge flag to delete the ec2 and created vpc"
+	echo "You need to specify an option to continue"
+	echo "See --help for more information about options"
 fi
