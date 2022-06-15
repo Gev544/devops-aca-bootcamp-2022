@@ -1,0 +1,22 @@
+Write script which will:
+
+1. create s3 bucket is aws
+2. create and upload index.html with "Hello World" content
+3. create ec2 instance with ubuntu OS
+4. download index.html file from s3 bucket
+5. install nginx and create config file in sites-enabled directory which will use index.html as a website
+
+***6. Write a script which will update index.html file with the logic of point 7. every minute
+***7. Website should show usd/amd price from rate.am for Ameria Bank  and the current date with seconds
+***8. Use HTML code to make your website use Headers, Footers etc...
+***9. Website should work as a systemd service 
+***10. systemd service file should be created by the script which will also check if there is already existing systemd service file, and check if the content is same
+***11. mount s3 bucket to ec2 instance, make script to update the s3 file, and make nginx use the file from mounted s3 bucket
+***12. Use jenkins Job for deployment
+
+P.S.
+ Write scripts fail tolerant as much as you can.
+
+ Write scripts with Simple-High-Level comments
+ 
+ Write cleanup script for all resources youre creating
