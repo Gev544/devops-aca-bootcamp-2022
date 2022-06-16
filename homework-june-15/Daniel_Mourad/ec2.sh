@@ -2,7 +2,7 @@
 
 set -e
 
-# name of the project which will user run script with
+# Name of the project which will user run script with
 projectName=$2
 
 # VPC related variables
@@ -35,8 +35,7 @@ sshKeyName="$projectName-ec2-key"
 resourceIds="$projectName-resources.txt"
 
 
-
-# creates vpc using $vpcName as the name and $vpcCIDRBlock as the cidr block and assigns the vpc id to $vpcId
+# Creates VPC with projects's name and CIDR block and assigns the ID to $vpcId
 function createVPC () {
 	echo "Creating VPC ($vpcName) with ($vpcCIDRBlock) CIDR Block..."
 	vpcId=$(aws ec2 create-vpc \
@@ -48,7 +47,7 @@ function createVPC () {
 }
 
 
-# creates subnet using $subnetName as the name and $subnetCIDRBlock as the cidr block and assigns the subnet id to $subnetId
+# Creates Subnet with projects's name and CIDR block and assigns the ID to $subnetId
 function createSubnet () {
 	echo "Creating Subnet ($subnetName) with ($subnetCIDRBlock) CIDR Block..."
 	subnetId=$(aws ec2 create-subnet \
@@ -61,7 +60,7 @@ function createSubnet () {
 }
 
 
-# creates internet gateway using $internetGatewayName as the name and assigns the internet gateway id to $internetGatewayId
+# Creates Internet Gateway with projects's name and assigns the ID to $InternetGatewayId
 function createInternetGateway () {
 	echo "Creating Internet Gateway ($internetGatewayName)..."
 	internetGatewayId=$(aws ec2 create-internet-gateway \
@@ -72,7 +71,7 @@ function createInternetGateway () {
 }
 
 
-# attaches internet gateway to the vpc
+# Attaches Internet Gateway to the VPC
 function attachInternetGatewayToVpc () {
 	echo "Attaching Internet Gateway ($internetGatewayName) to VPC ($vpcName)..."
 	aws ec2 attach-internet-gateway \
@@ -83,7 +82,7 @@ function attachInternetGatewayToVpc () {
 }
 
 
-# creates route table using $routeTableName as the name in $vpcId vpc and assigns the route table id to $routeTableId
+# Creates Route Table with projects's name in VPC and assigns the ID to $routeTableId
 function createRouteTable () {
 	echo "Creating Route Table ($routeTableName) in VPC ($vpcName)..."
 	routeTableId=$(aws ec2 create-route-table \
@@ -95,7 +94,7 @@ function createRouteTable () {
 }
 
 
-# creates route from $internetGatewayName to anywhere in $routeTableName
+# Creates Route from Internet Gateway to anywhere
 function createRoute () {
 	echo "Creating Route from ($internetGatewayName) to (0.0.0.0/0)..."
 	aws ec2 create-route \
@@ -107,7 +106,7 @@ function createRoute () {
 }
 
 
-# associates route table with subnet
+# Associates the Route Table with Subnet
 function associateRouteTable () {
 	echo "Associating Route Table ($routeTableName) with Subnet ($subnetName)..."
 	aws ec2 associate-route-table \
@@ -118,8 +117,7 @@ function associateRouteTable () {
 }
 
 
-# creates security group using $securityGroupName as the name in vpc $vpcId vpc
-# and assigns the security group id to $securityGroupId
+# Creates Security Group with projects's name in VPC and assigns the ID to $securityGroupId
 function createSecurityGroup () {
 	echo "Creating Security Group ($securityGroupName) for SSH and HTTP access..."
 	securityGroupId=$(aws ec2 create-security-group \
@@ -133,7 +131,7 @@ function createSecurityGroup () {
 }
 
 
-# allows ssh and http inbound from anywhere
+# Allows SSH and HTTP access from anywhere
 function authorizeSecurityGroup () {
 	echo "Authorizing SSH and HTTP access from anywhere..."
 	aws ec2 authorize-security-group-ingress \
@@ -153,7 +151,7 @@ function authorizeSecurityGroup () {
 }
 
 
-# generates ssh key pair
+# Generates SSH Key Pair with the projects's name and makes it only readable by user
 function generateKeyPair () {
 	echo "Generating SSH Key Pair ($sshKeyName)..."
 	aws ec2 create-key-pair \
@@ -165,7 +163,7 @@ function generateKeyPair () {
 }
 
 
-# creates ubuntu 20.04 lts instance
+# Creates custom EC2 Instance using variables as arguments and assigns the ID to $instanceId and IP to $instancePublicIp
 function createInstance () {
 	echo "Launching EC2 instance with the name ($instanceName) and type ($instanceType)..."
 	instanceId=$(aws ec2 run-instances \
@@ -186,7 +184,7 @@ function createInstance () {
 }
 
 
-# deletes entire project step-by-step
+# Deletes the entire project step-by-step
 function deleteProject () {
 	vpcId=$(grep "vpc-" $resourceIds) && \
 	subnetId=$(grep "subnet-" $resourceIds) && \
@@ -236,7 +234,7 @@ function deleteProject () {
 }
 
 
-# prints ids of the resources
+# Shows available resources of the project
 function showResourceIds () {
 	echo " "
 	echo "VPC ID -> $vpcId"
@@ -247,17 +245,11 @@ function showResourceIds () {
 	echo "Instance ID -> $instanceId"
 	echo "Public IPv4 Address -> $instancePublicIp" 
 	echo " "
-	echo "$vpcId
-$subnetId
-$internetGatewayId
-$routeTableId
-$securityGroupId
-$instanceId
-ip-$instancePublicIp" > $resourceIds
+	echo -e "$vpcId\n$subnetId\n$internetGatewayId\n$routeTableId\n$securityGroupId\n$instanceId\nip-$instancePublicIp" > $resourceIds
 }
 
 
-# just echos for --help
+# Just echos for --help
 function showHelpMenu() {
 	echo " "
 	echo "This script allows to automatically create VPC, Subnet, Internet Gateway, Route Table, Security Group and EC2 Instance"
@@ -278,14 +270,22 @@ function showHelpMenu() {
 
 if [[ $1 = "--create" ]] && [[ ! -z $projectName ]]
 then
-	createVPC && \
-	createSubnet && \
-	createInternetGateway && attachInternetGatewayToVpc && \
-	createRouteTable && createRoute && associateRouteTable && \
-	createSecurityGroup && authorizeSecurityGroup && \
-	generateKeyPair && \
-	createInstance && \
-	showResourceIds
+	if [[ ! -f "$resourceIds" ]]
+	then
+		createVPC && \
+		createSubnet && \
+		createInternetGateway && attachInternetGatewayToVpc && \
+		createRouteTable && createRoute && associateRouteTable && \
+		createSecurityGroup && authorizeSecurityGroup && \
+		generateKeyPair && \
+		createInstance && \
+		showResourceIds
+	else
+		echo " "
+		echo "There is already project named $projectName, if you want to recreate first you need to delete it"
+		echo "See --help for more information"
+		echo " "
+	fi
 elif [[ $1 = "--delete" ]] && [[ ! -z $projectName ]]
 then
 	if [[ -f "$resourceIds" ]]

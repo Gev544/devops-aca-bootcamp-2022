@@ -1,46 +1,49 @@
 #!/bin/bash
 
-# this script will create/delete the bucket
+# This script will create/delete bucket
 
 set -e
 
-region="eu-central-1"
-bucketName="aca-bucket-homework-2"
-bucketType="public-read"
-bucketInfo="bucket_info.txt"
-bucketURL=
+bucketName=$2
+bucketRegion=$3
+bucketType=$4
 
-# creates bucket with above defined variables using as arguments
+# Creates Bucket with above defined variables using as arguments
 function createBucket () {
-    echo "Creating bucket $bucketName in $region ..."
-    aws s3api create-bucket \
+    echo "Creating bucket ($bucketName) in ($bucketRegion)..."
+    bucketURL=$(aws s3api create-bucket \
         --bucket $bucketName \
         --acl $bucketType \
-        --region $region \
-        --create-bucket-configuration LocationConstraint=$region \
-        --output text > $bucketInfo && \
-    echo "Done."
-    bucketURL=$(cat $bucketInfo | head -1)
+        --region $bucketRegion \
+        --create-bucket-configuration LocationConstraint=$bucketRegion \
+        --output text) && \
+    echo "Done." && \
     echo "You can find your bucket at $bucketURL"
 }
 
-# deletes bucket and bucket_info.txt file which conatins bucket's URL
+# Deletes Bucket using name and region
 function deleteBucket () {
-    echo "Deleting bucket $bucketName in $region ..."
+    echo "Deleting bucket ($bucketName) from ($bucketRegion)..."
     aws s3api delete-bucket \
         --bucket $bucketName \
-        --region $region && \
-        rm -f $bucketInfo && \
+        --region $bucketRegion && \
     echo "Done."
 }
 
-if [[ $1 = "--create" ]]
+if [[ $1 = "--create" ]] && [[ ! -z $bucketName ]] && [[ ! -z $bucketRegion ]] && [[ ! -z $bucketType ]]
 then
     createBucket
-elif [[ $1 = "--delete" ]]
+elif [[ $1 = "--delete" ]] && [[ ! -z $bucketName ]] && [[ ! -z $bucketRegion ]]
 then
     deleteBucket
 else
-    echo "--create -> create bucket"
-    echo "--delete -> delete bucket"
+    echo " "
+    echo "This script creates/deletes buckets in/from Amazon Web Services"
+    echo " "
+    echo "  --create -> creates bucket | The Bucket name, region, access type needs to be specified"
+    echo "example -> ./bucket.sh --create example-bucket eu-central-1 public-read"
+    echo " "
+    echo "  --delete -> deletes bucket | Only the name and region needs to be specified"
+    echo "example -> ./bucket.sh --delete example-bucket eu-central-1"
+    echo " "
 fi
