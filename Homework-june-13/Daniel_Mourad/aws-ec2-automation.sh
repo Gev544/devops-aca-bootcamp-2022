@@ -35,7 +35,6 @@ sshKeyName="$projectName-ec2-key"
 resourceIds="$projectName-resources.txt"
 
 
-
 # creates vpc using $vpcName as the name and $vpcCIDRBlock as the cidr block and assigns the vpc id to $vpcId
 function createVPC () {
 	echo "Creating VPC ($vpcName) with ($vpcCIDRBlock) CIDR Block..."
@@ -247,13 +246,7 @@ function showResourceIds () {
 	echo "Instance ID -> $instanceId"
 	echo "Public IPv4 Address -> $instancePublicIp" 
 	echo " "
-	echo "$vpcId
-$subnetId
-$internetGatewayId
-$routeTableId
-$securityGroupId
-$instanceId
-ip-$instancePublicIp" > $resourceIds
+	echo -e "$vpcId\n$subnetId\n$internetGatewayId\n$routeTableId\n$securityGroupId\n$instanceId\nip-$instancePublicIp" > $resourceIds
 }
 
 
@@ -278,14 +271,22 @@ function showHelpMenu() {
 
 if [[ $1 = "--create" ]] && [[ ! -z $projectName ]]
 then
-	createVPC && \
-	createSubnet && \
-	createInternetGateway && attachInternetGatewayToVpc && \
-	createRouteTable && createRoute && associateRouteTable && \
-	createSecurityGroup && authorizeSecurityGroup && \
-	generateKeyPair && \
-	createInstance && \
-	showResourceIds
+	if [[ ! -f "$resourceIds" ]]
+	then
+		createVPC && \
+		createSubnet && \
+		createInternetGateway && attachInternetGatewayToVpc && \
+		createRouteTable && createRoute && associateRouteTable && \
+		createSecurityGroup && authorizeSecurityGroup && \
+		generateKeyPair && \
+		createInstance && \
+		showResourceIds
+	else
+		echo " "
+		echo "There is already project named $projectName, if you want to recreate first you need to delete it"
+		echo "See --help for more information"
+		echo " "
+	fi
 elif [[ $1 = "--delete" ]] && [[ ! -z $projectName ]]
 then
 	if [[ -f "$resourceIds" ]]
