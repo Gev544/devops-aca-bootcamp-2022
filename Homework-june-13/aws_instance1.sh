@@ -69,7 +69,7 @@
 	### attach-internet-getway to vpc
 	aws ec2 attach-internet-gateway \
 		--vpc-id $vpc_id \
-		--internet-gateway-id $igw 
+		--internet-gateway-id $igw	
 		}
 
 		routing_table() {
@@ -93,9 +93,11 @@
 		associetione() {
 
 	### associate subnet to route table
-	associate1=$(aws ec2 associate-route-table  \
+	associate2=$(aws ec2 associate-route-table  \
 		--subnet-id $sub_id \
 		--route-table-id $rtb)
+	associate1=$(echo $associate2 | cut -d " " -f 1)
+	#echo $associate1
          
 	### show subnet associetione
 	## aws ec2 describe-subnets --filters "Name=vpc-id,Values=vpc-2f09a348" --query "Subnets[*].{ID:SubnetId,CIDR:CidrBlock}"
@@ -218,6 +220,10 @@
 	if [[ -z $rtb ]]
         then
                 echo "route_table was not created"
+		aws ec2 detach-internet-gateway \
+                --internet-gateway-id $igw \
+                --vpc-id $vpc_id
+
 		aws ec2 delete-route-table \
 		--route-table-id $rtb
 		aws ec2 delete-internet-gateway \
@@ -237,6 +243,9 @@
                 echo "was not associated"
 		aws ec2 disassociate-route-table \
 		--association-id $associate1
+		aws ec2 detach-internet-gateway \
+                --internet-gateway-id $igw \
+                --vpc-id $vpc_id
 		aws ec2 delete-route-table \
                 --route-table-id $rtb
                 aws ec2 delete-internet-gateway \
@@ -258,6 +267,9 @@
 		--group-id $security_group
 		aws ec2 disassociate-route-table \
                 --association-id $associate1
+		aws ec2 detach-internet-gateway \
+                --internet-gateway-id $igw \
+                --vpc-id $vpc_id
                 aws ec2 delete-route-table \
                 --route-table-id $rtb
                 aws ec2 delete-internet-gateway \
@@ -279,6 +291,9 @@
                 --group-id $security_group
                 aws ec2 disassociate-route-table \
                 --association-id $associate1
+		aws ec2 detach-internet-gateway \
+                --internet-gateway-id $igw \
+                --vpc-id $vpc_id
                 aws ec2 delete-route-table \
                 --route-table-id $rtb
                 aws ec2 delete-internet-gateway \
@@ -299,11 +314,13 @@
                 echo "key_pair was not genereted"
 		aws ec2 delete-key-pair \
                 --key-name MyKeyPair1
-                echo "ssh conectione not allowed"
                 aws ec2 delete-security-group \
                 --group-id $security_group
                 aws ec2 disassociate-route-table \
                 --association-id $associate1
+		aws ec2 detach-internet-gateway \
+                --internet-gateway-id $igw \
+                --vpc-id $vpc_id
                 aws ec2 delete-route-table \
                 --route-table-id $rtb
                 aws ec2 delete-internet-gateway \
@@ -323,11 +340,13 @@
                 echo "instance was not created"
 		aws ec2 delete-key-pair \
 		--key-name MyKeyPair1
-		echo "ssh conectione not allowed"
                 aws ec2 delete-security-group \
                 --group-id $security_group
                 aws ec2 disassociate-route-table \
                 --association-id $associate1
+		aws ec2 detach-internet-gateway \
+                --internet-gateway-id $igw \
+                --vpc-id $vpc_id
                 aws ec2 delete-route-table \
                 --route-table-id $rtb
                 aws ec2 delete-internet-gateway \
