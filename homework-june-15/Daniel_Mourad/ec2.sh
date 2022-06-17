@@ -37,88 +37,124 @@ resourceIds="$projectName-resources.txt"
 
 # Creates VPC with projects's name and CIDR block and assigns the ID to $vpcId
 function createVPC () {
+	set +e
 	echo "Creating VPC ($vpcName) with ($vpcCIDRBlock) CIDR Block..."
 	vpcId=$(aws ec2 create-vpc \
 		--tag-specification 'ResourceType=vpc,Tags=[{Key=Name,Value='$vpcName'}]' \
 		--cidr-block $vpcCIDRBlock \
 		--query Vpc.VpcId \
-		--output text) && \
-	echo "Done."
+		--output text)
+	if [[ $? != 0 ]]; then
+		cleanUp
+	else 
+		echo "Done."
+	fi
 }
 
 
 # Creates Subnet with projects's name and CIDR block and assigns the ID to $subnetId
 function createSubnet () {
+	set +e
 	echo "Creating Subnet ($subnetName) with ($subnetCIDRBlock) CIDR Block..."
 	subnetId=$(aws ec2 create-subnet \
 		--tag-specification 'ResourceType=subnet,Tags=[{Key=Name,Value='$subnetName'}]' \
 		--vpc-id $vpcId \
 		--cidr-block $subnetCIDRBlock \
 		--query Subnet.SubnetId \
-		--output text) && \
-	echo "Done."
+		--output text)
+	if [[ $? != 0 ]]; then
+		cleanUp
+	else 
+		echo "Done."
+	fi
 }
 
 
 # Creates Internet Gateway with projects's name and assigns the ID to $InternetGatewayId
 function createInternetGateway () {
+	set +e
 	echo "Creating Internet Gateway ($internetGatewayName)..."
 	internetGatewayId=$(aws ec2 create-internet-gateway \
 		--tag-specification 'ResourceType=internet-gateway,Tags=[{Key=Name,Value='$internetGatewayName'}]' \
 		--query InternetGateway.InternetGatewayId \
-		--output text) && \
-	echo "Done."
+		--output text)
+	if [[ $? != 0 ]]; then
+		cleanUp
+	else 
+		echo "Done."
+	fi
 }
 
 
 # Attaches Internet Gateway to the VPC
 function attachInternetGatewayToVpc () {
+	set +e
 	echo "Attaching Internet Gateway ($internetGatewayName) to VPC ($vpcName)..."
 	aws ec2 attach-internet-gateway \
 		--vpc-id $vpcId \
 		--internet-gateway-id $internetGatewayId \
-		--output text > /dev/null && \
-	echo "Done."
+		--output text > /dev/null
+	if [[ $? != 0 ]]; then
+		cleanUp
+	else 
+		echo "Done."
+	fi
 }
 
 
 # Creates Route Table with projects's name in VPC and assigns the ID to $routeTableId
 function createRouteTable () {
+	set +e
 	echo "Creating Route Table ($routeTableName) in VPC ($vpcName)..."
 	routeTableId=$(aws ec2 create-route-table \
 		--tag-specification 'ResourceType=route-table,Tags=[{Key=Name,Value='$routeTableName'}]' \
 		--vpc-id $vpcId \
 		--query RouteTable.RouteTableId \
-		--output text) && \
-	echo "Done."
+		--output text)
+	if [[ $? != 0 ]]; then
+		cleanUp
+	else 
+		echo "Done."
+	fi
 }
 
 
 # Creates Route from Internet Gateway to anywhere
 function createRoute () {
+	set +e
 	echo "Creating Route from ($internetGatewayName) to (0.0.0.0/0)..."
 	aws ec2 create-route \
 		--route-table-id $routeTableId \
 		--destination-cidr-block 0.0.0.0/0 \
 		--gateway-id $internetGatewayId \
-		--output text > /dev/null && \
-	echo "Done."
+		--output text > /dev/null
+	if [[ $? != 0 ]]; then
+		cleanUp
+	else 
+		echo "Done."
+	fi
 }
 
 
 # Associates the Route Table with Subnet
 function associateRouteTable () {
+	set +e
 	echo "Associating Route Table ($routeTableName) with Subnet ($subnetName)..."
 	aws ec2 associate-route-table \
 		--subnet-id $subnetId \
 		--route-table-id $routeTableId \
-		--output text > /dev/null && \
-	echo "Done."
+		--output text > /dev/null
+	if [[ $? != 0 ]]; then
+		cleanUp
+	else 
+		echo "Done."
+	fi
 }
 
 
 # Creates Security Group with projects's name in VPC and assigns the ID to $securityGroupId
 function createSecurityGroup () {
+	set +e
 	echo "Creating Security Group ($securityGroupName) for SSH and HTTP access..."
 	securityGroupId=$(aws ec2 create-security-group \
 		--tag-specification 'ResourceType=security-group,Tags=[{Key=Name,Value='$securityGroupName'}]' \
@@ -126,45 +162,64 @@ function createSecurityGroup () {
 		--description "Security group for SSH and HTTP access" \
     	--vpc-id $vpcId \
 		--query GroupId \
-		--output text) && \
-	echo "Done."
+		--output text)
+	if [[ $? != 0 ]]; then
+		cleanUp
+	else 
+		echo "Done."
+	fi
 }
 
 
 # Allows SSH and HTTP access from anywhere
 function authorizeSecurityGroup () {
+	set +e
 	echo "Authorizing SSH and HTTP access from anywhere..."
 	aws ec2 authorize-security-group-ingress \
 		--group-id $securityGroupId \
 		--protocol tcp \
 		--port 22 \
 		--cidr 0.0.0.0/0 \
-		--output text > /dev/null && \
-	echo "SSH access on port 22/tcp is authorized."
+		--output text > /dev/null
+	if [[ $? != 0 ]]; then
+		cleanUp
+	else 
+		echo "SSH access on port 22/tcp is authorized."
+	fi
 	aws ec2 authorize-security-group-ingress \
 		--group-id $securityGroupId \
 		--protocol tcp \
 		--port 80 \
 		--cidr 0.0.0.0/0 \
-		--output text > /dev/null && \
-	echo "HTTP access on port 80/tcp is authorized."
+		--output text > /dev/null
+	if [[ $? != 0 ]]; then
+		cleanUp
+	else 
+		echo "HTTP access on port 80/tcp is authorized."
+	fi
 }
 
 
 # Generates SSH Key Pair with the projects's name and makes it only readable by user
 function generateKeyPair () {
+	set +e
 	echo "Generating SSH Key Pair ($sshKeyName)..."
 	aws ec2 create-key-pair \
 		--key-name $sshKeyName \
 		--query "KeyMaterial" \
 		--output text > $sshKeyName.pem && \
-	chmod 400 $sshKeyName.pem && \
-	echo "Done."
+	chmod 400 $sshKeyName.pem
+	if [[ $? != 0 ]]; then
+		cleanUp
+	else 
+		echo "Done."
+	fi
 }
 
 
 # Creates custom EC2 Instance using variables as arguments and assigns the ID to $instanceId and IP to $instancePublicIp
 function createInstance () {
+	set +e
 	echo "Launching EC2 instance with the name ($instanceName) and type ($instanceType)..."
 	instanceId=$(aws ec2 run-instances \
 		--tag-specification 'ResourceType=instance,Tags=[{Key=Name,Value='$instanceName'}]' \
@@ -179,58 +234,89 @@ function createInstance () {
 	instancePublicIp=$(aws ec2 describe-instances \
 		--instance-id $instanceId | \
 		grep "PublicIpAddress" | \
-		cut -d '"' -f 4) && \
+		cut -d '"' -f 4)
+	if [[ $? != 0 ]]; then
+		cleanUp
+	else 
+		echo "Done."
+	fi
+}
+
+
+# Cleans up if something goes wrong
+function cleanUp () {
+	set +e
+	echo "Something went wrong"
+	echo "Cleaning up..."
+	aws ec2 terminate-instances --instance-ids $instanceId --output text > /dev/null
+	aws ec2 wait instance-terminated --instance-ids $instanceId
+	aws ec2 delete-key-pair --key-name $sshKeyName
+	aws ec2 delete-security-group --group-id $securityGroupId
+	aws ec2 delete-subnet --subnet-id $subnetId
+	aws ec2 delete-route-table --route-table-id $routeTableId
+	aws ec2 detach-internet-gateway --internet-gateway-id $internetGatewayId --vpc-id $vpcId
+	aws ec2 delete-internet-gateway --internet-gateway-id $internetGatewayId
+	aws ec2 delete-vpc --vpc-id $vpcId
+	rm -f $sshKeyName.pem
+	rm -f $resourceIds
 	echo "Done."
+	exit
+	set -e
 }
 
 
 # Deletes the entire project step-by-step
 function deleteProject () {
-	vpcId=$(grep "vpc-" $resourceIds) && \
-	subnetId=$(grep "subnet-" $resourceIds) && \
-	internetGatewayId=$(grep "igw-" $resourceIds) && \
-	routeTableId=$(grep "rtb-" $resourceIds) && \
-	securityGroupId=$(grep "sg-" $resourceIds) && \
-	instanceId=$(grep "i-" $resourceIds) && \
+	set -e
+	vpcId=$(grep "vpc-" $resourceIds)
+	subnetId=$(grep "subnet-" $resourceIds)
+	internetGatewayId=$(grep "igw-" $resourceIds)
+	routeTableId=$(grep "rtb-" $resourceIds)
+	securityGroupId=$(grep "sg-" $resourceIds)
+	instanceId=$(grep "i-" $resourceIds)
 
-	echo "Terminating the EC2 instance ($instanceName)..." && \
-	aws ec2 terminate-instances --instance-ids $instanceId --output text > /dev/null && \
-	echo "Waiting for the termination of EC2 instance ($instanceName)..." && \
-	aws ec2 wait instance-terminated --instance-ids $instanceId && \
-	echo "Done." && \
+	echo "Terminating the EC2 instance ($instanceName)..."
+	aws ec2 terminate-instances --instance-ids $instanceId --output text > /dev/null
+	echo "Waiting for the termination of EC2 instance ($instanceName)..."
+	aws ec2 wait instance-terminated --instance-ids $instanceId
+	echo "Done."
 
-	echo "Deleting the SSH Key Pair ($sshKeyName)..." && \
-	aws ec2 delete-key-pair --key-name $sshKeyName && \
-	echo "Done." && \
+	echo "Deleting the SSH Key Pair ($sshKeyName)..."
+	aws ec2 delete-key-pair --key-name $sshKeyName
+	echo "Done."
 
-	echo "Deleting the Security Group ($securityGroupName)..." && \
-	aws ec2 delete-security-group --group-id $securityGroupId && \
-	echo "Done." && \
+	echo "Deleting the Security Group ($securityGroupName)..."
+	aws ec2 delete-security-group --group-id $securityGroupId
+	echo "Done."
 
-	echo "Deleting the Subnet ($subnetName)..." && \
-	aws ec2 delete-subnet --subnet-id $subnetId && \
-	echo "Done." && \
+	echo "Deleting the Subnet ($subnetName)..."
+	aws ec2 delete-subnet --subnet-id $subnetId
+	echo "Done."
 
-	echo "Deleting the Route Table ($routeTableName)..." && \
-	aws ec2 delete-route-table --route-table-id $routeTableId && \
-	echo "Done." && \
+	echo "Deleting the Route Table ($routeTableName)..."
+	aws ec2 delete-route-table --route-table-id $routeTableId
+	echo "Done."
 
-	echo "Detaching the Internet Gateway ($internetGatewayName) from the VPC ($vpcName)..." && \
-	aws ec2 detach-internet-gateway --internet-gateway-id $internetGatewayId --vpc-id $vpcId && \
-	echo "Done." && \
+	echo "Detaching the Internet Gateway ($internetGatewayName) from the VPC ($vpcName)..."
+	aws ec2 detach-internet-gateway --internet-gateway-id $internetGatewayId --vpc-id $vpcId
+	echo "Done."
 
-	echo "Deleting the Internet Gateway ($internetGatewayName)..." && \
-	aws ec2 delete-internet-gateway --internet-gateway-id $internetGatewayId && \
-	echo "Done." && \
+	echo "Deleting the Internet Gateway ($internetGatewayName)..."
+	aws ec2 delete-internet-gateway --internet-gateway-id $internetGatewayId
+	echo "Done."
 
-	echo "Deleting the VPC ($vpcName)..." && \
-	aws ec2 delete-vpc --vpc-id $vpcId && \
-	echo "Done." && \
+	echo "Deleting the VPC ($vpcName)..."
+	aws ec2 delete-vpc --vpc-id $vpcId
+	echo "Done."
 
 	echo "Deleting ($sshKeyName.pem) and ($resourceIds)" && \
-	rm -f $sshKeyName.pem && \
-	rm -f $resourceIds && \
+	rm -f $sshKeyName.pem
+	rm -f $resourceIds
 	echo "Done."
+
+	if [[ $? != 0 ]]; then
+		cleanUp
+	fi
 }
 
 
@@ -272,13 +358,13 @@ if [[ $1 = "--create" ]] && [[ ! -z $projectName ]]
 then
 	if [[ ! -f "$resourceIds" ]]
 	then
-		createVPC && \
-		createSubnet && \
-		createInternetGateway && attachInternetGatewayToVpc && \
-		createRouteTable && createRoute && associateRouteTable && \
-		createSecurityGroup && authorizeSecurityGroup && \
-		generateKeyPair && \
-		createInstance && \
+		createVPC
+		createSubnet
+		createInternetGateway && attachInternetGatewayToVpc
+		createRouteTable && createRoute && associateRouteTable
+		createSecurityGroup && authorizeSecurityGroup
+		generateKeyPair
+		createInstance
 		showResourceIds
 	else
 		echo " "
