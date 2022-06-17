@@ -260,7 +260,7 @@ function cleanUp () {
 	rm -f ${sshKeyName}.pem
 	rm -f $resourceIds
 	echo "Done."
-	exit
+	exit 1
 }
 
 
