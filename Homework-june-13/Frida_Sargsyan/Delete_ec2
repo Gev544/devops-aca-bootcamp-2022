@@ -1,0 +1,29 @@
+#!/bin/bash
+
+source ./id_file
+echo "DELETEEEEEEE"
+
+#Delete instance 
+aws ec2 terminate-instances --instance-ids $instance_id
+
+sleep 100
+#Delete security group
+aws ec2 delete-security-group --group-id $sg_id
+
+#Delete  subnet
+aws ec2 delete-subnet --subnet-id $subnetid
+
+#Delete  route table
+aws ec2 delete-route-table --route-table-id $rtb_id
+
+#Detach internet gateway from VPC
+aws ec2 detach-internet-gateway --internet-gateway-id $igw_id --vpc-id $vpc_id
+
+#Delete internet gateway
+aws ec2 delete-internet-gateway --internet-gateway-id $igw_id
+
+#Delete VPC
+aws ec2 delete-vpc --vpc-id $vpc_id
+
+rm ./id_file
+echo "Success"
