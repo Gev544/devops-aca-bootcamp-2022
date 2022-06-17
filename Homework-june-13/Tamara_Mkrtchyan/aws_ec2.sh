@@ -10,16 +10,18 @@ Reset='\033[0m'           # Text Reset
 command=$1
 name=$2
 
+# this function is being called after every command to check for a return value
+# if the return value is not success then it deletes previously created all resources
 check_for_error () {
 	return_value=$(echo $?)
 	if [[ $return_value != 0 ]]; then
-		echo -e "${Yellow}An error occured, should delete everything now${Reset}"
+		echo -e "${Yellow}An error occured while $1, should delete everything now${Reset}"
 		delete_all "error"
 		exit 1
 	fi
 }
 
-# fiunction to delete all
+# fiunction to delete all created resources
 delete_all () {
 	if [[ $1 != "error" ]]; then
 		vpcId=$(grep "vpc-" $name-ids)
@@ -84,7 +86,7 @@ create_ec2 () {
 				--query Vpc.VpcId \
 				--output text) && \
 				echo -e "${Green}VPC is created successfully !${Reset}"
-	check_for_error
+	check_for_error "creating VPC"
 
 # Using the VPC ID to create a subnet with a 10.0.1.0/24 CIDR block
 	aws ec2 create-subnet \
@@ -93,7 +95,7 @@ create_ec2 () {
 				--cidr-block 10.0.0.0/24 \
 				--output text >/dev/null && \
 				echo -e "${Green}Subnet is created successfully !${Reset}"
-	check_for_error
+	check_for_error "creating Subnet"
 
 # Creating an internet gateway
 	subnetId=$(aws ec2 describe-subnets \
@@ -107,14 +109,14 @@ create_ec2 () {
 				--query InternetGateway.InternetGatewayId \
 				--output text) && \
 				echo -e "${Green}Internet Gateway is created successfully !${Reset}"
-	check_for_error
+	check_for_error "creating Internet Gateway"
 
 # Attaching Internet Gateway to the VPC
 	aws ec2 attach-internet-gateway \
 				--vpc-id $vpcId \
 				--internet-gateway-id $igwId && \
 				echo -e "${Green}Internet Gateway is attached successfully !${Reset}"
-	check_for_error
+	check_for_error "attaching Internet Gateway to the VPC"
 
 # Creating a custom route table for our VPC
 	rtbId=$(aws ec2 crete-route-table \
@@ -123,7 +125,7 @@ create_ec2 () {
 				--query RouteTable.RouteTableId \
 				--output text) && \
 				echo -e "${Green}Route Table is created successfully !${Reset}"
-	check_for_error
+	check_for_error "creating a custom route table for our VPC"
 
 # Creating a route in the route table that points all traffic (0.0.0.0/0) to the internet gateway and associating it
 	aws ec2 create-route \
@@ -131,14 +133,14 @@ create_ec2 () {
 				--destination-cidr-block 0.0.0.0/0 \
 				--gateway-id $igwId >/dev/null && \
 				echo -e "${Green}Route to 0.0.0.0/0 is created successfully !${Reset}"
-	check_for_error
+	check_for_error "creating a route in the route table that points all traffic (0.0.0.0/0) to the internet gateway"
 
 	aws ec2 associate-route-table \
 			--subnet-id $subnetId \
 			--route-table-id $rtbId \
 			--output text > /dev/null && \
 				echo -e "${Green}Route Table associated successfully!${Reset}"
-	check_for_error
+	check_for_error "associating teh route table"
 
 # Creating a Securoty Group and authorizing shh and http ports from all ips
 	sgId=$(aws ec2 create-security-group \
@@ -149,7 +151,7 @@ create_ec2 () {
 			--query GroupId \
 			--output text) && \
 			echo -e "${Green}Security Group is created successfully !${Reset}"
-	check_for_error
+	check_for_error "creating a Securoty Group"
 
 	aws ec2 authorize-security-group-ingress \
 			--group-id $sgId \
@@ -157,14 +159,14 @@ create_ec2 () {
 			--port 22 \
 			--cidr 0.0.0.0/0 >/dev/null && \
 			echo -e "${Green}22 port for SSH is authorized successfully !${Reset}"
-	check_for_error
+	check_for_error "authorizing a 22 port"
 	aws ec2 authorize-security-group-ingress \
 			--group-id $sgId \
 			--protocol tcp \
 			--port 80 \
 			--cidr 0.0.0.0/0 >/dev/null && \
 			echo -e "${Green}80 port for HTTP is authorized successfully !${Reset}"
-	check_for_error
+	check_for_error "authorizing a 80 port"
 
 # Creating Key Pair for ssh
 	aws ec2 create-key-pair \
@@ -173,7 +175,7 @@ create_ec2 () {
 			--output text > $name-keypair.pem && \
 			chmod 400 $name-keypair.pem && \
 			echo -e "${Green}SSH keypair is created successfully !${Reset}"
-	check_for_error
+	check_for_error "creating Key Pair"
 
 # Running an instance with Ubuntu Server 20.04 LTS (HVM), SSD Volume Type (64-bit (x86))
 	aws ec2 run-instances \
@@ -186,7 +188,7 @@ create_ec2 () {
 			--subnet-id $subnetId \
 			--associate-public-ip-address >/dev/null && \
 			echo -e "${Green}EC2 Instance is created successfully !${Reset}"
-	check_for_error
+	check_for_error "running an instance"
 
 # Getting the instance ID
 	instanceId=$(aws ec2 describe-instances \
