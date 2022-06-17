@@ -261,7 +261,6 @@ function cleanUp () {
 	rm -f $resourceIds
 	echo "Done."
 	exit
-	set -e
 }
 
 
@@ -309,7 +308,7 @@ function deleteProject () {
 	aws ec2 delete-vpc --vpc-id $vpcId
 	echo "Done."
 
-	echo "Deleting ($sshKeyName.pem) and ($resourceIds)" && \
+	echo "Deleting ($sshKeyName.pem) and ($resourceIds)"
 	rm -f $sshKeyName.pem
 	rm -f $resourceIds
 	echo "Done."
@@ -330,7 +329,6 @@ function showResourceIds () {
 	echo "Security Group ID -> $securityGroupId"
 	echo "Instance ID -> $instanceId"
 	echo "Public IPv4 Address -> $instancePublicIp" 
-	echo " "
 	echo -e "$vpcId\n$subnetId\n$internetGatewayId\n$routeTableId\n$securityGroupId\n$instanceId\nip-$instancePublicIp" > $resourceIds
 }
 
@@ -360,9 +358,13 @@ then
 	then
 		createVPC
 		createSubnet
-		createInternetGateway && attachInternetGatewayToVpc
-		createRouteTable && createRoute && associateRouteTable
-		createSecurityGroup && authorizeSecurityGroup
+		createInternetGateway
+		attachInternetGatewayToVpc
+		createRouteTable
+		createRoute
+		associateRouteTable
+		createSecurityGroup
+		authorizeSecurityGroup
 		generateKeyPair
 		createInstance
 		showResourceIds
