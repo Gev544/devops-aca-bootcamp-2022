@@ -6,33 +6,33 @@ set -e
 projectName=$2
 
 # VPC related variables
-vpcName="$projectName-vpc"
+vpcName="${projectName}-vpc"
 vpcCIDRBlock="172.22.0.0/16"
 
 # Subnet related variables
-subnetName="$projectName-subnet"
+subnetName="${projectName}-subnet"
 subnetCIDRBlock="172.22.22.0/24"
 
 # Internet Gateway related variables
-internetGatewayName="$projectName-internet-gateway"
+internetGatewayName="${projectName}-internet-gateway"
 
 # Route Table related variables
-routeTableName="$projectName-route-table"
+routeTableName="${projectName}-route-table"
 
 # Security Group related variables
-securityGroupName="$projectName-security-group"
+securityGroupName="${projectName}-security-group"
 
 # Instance related variables
-instanceName="$projectName-instance"
+instanceName="${projectName}-instance"
 instanceImageId="ami-02584c1c9d05efa69"
 instanceType="t2.micro"
 instanceCount="1"
 
 # SSH Key Pair related variables
-sshKeyName="$projectName-ec2-key"
+sshKeyName="${projectName}-ec2-key"
 
 # Resources file name
-resourceIds="$projectName-resources.txt"
+resourceIds="${projectName}-resources.txt"
 
 
 # Creates VPC with projects's name and CIDR block and assigns the ID to $vpcId
@@ -257,7 +257,7 @@ function cleanUp () {
 	aws ec2 detach-internet-gateway --internet-gateway-id $internetGatewayId --vpc-id $vpcId
 	aws ec2 delete-internet-gateway --internet-gateway-id $internetGatewayId
 	aws ec2 delete-vpc --vpc-id $vpcId
-	rm -f $sshKeyName.pem
+	rm -f ${sshKeyName}.pem
 	rm -f $resourceIds
 	echo "Done."
 	exit
@@ -308,8 +308,8 @@ function deleteProject () {
 	aws ec2 delete-vpc --vpc-id $vpcId
 	echo "Done."
 
-	echo "Deleting ($sshKeyName.pem) and ($resourceIds)"
-	rm -f $sshKeyName.pem
+	echo "Deleting (${sshKeyName}.pem) and ($resourceIds)"
+	rm -f ${sshKeyName}.pem
 	rm -f $resourceIds
 	echo "Done."
 
