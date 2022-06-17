@@ -1,0 +1,15 @@
+vpc-08cfc799081dbafc2
+subnet-0905c5dc854d5d6bc
+subnet-05c5dcdf622ad2ab1
+igw-0438f6b532243a906
+rtb-0aa8f57dbd50f6630
+{
+    "AssociationId": "rtbassoc-0310e2d026f7ffb51",
+    "AssociationState": {
+        "State": "associated"
+    }
+}
+{
+    "GroupId": "sg-073634267c5b59155"
+}
+i-081755242760ff4b2

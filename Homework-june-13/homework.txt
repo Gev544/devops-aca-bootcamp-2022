@@ -1,2 +1,0 @@
-Homework:
-Create 1 EC2 instance with all necessary resources. Don't use default resources, create your own!
