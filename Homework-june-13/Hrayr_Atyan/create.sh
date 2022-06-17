@@ -1,5 +1,6 @@
 #!/bin/bash 
 
+
 #Creating VPC 
 VPC_ID=$(aws ec2 create-vpc --cidr-block 10.10.0.0/16 --query Vpc.VpcId --output text)
 
@@ -15,7 +16,7 @@ Subnet_ID=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.10.0.0/24 --q
 if [ ! $? -eq 0 ]
 then
 	echo "Can't create SUBNET"
-	./cleanup.sh $VPC_ID
+	./clean_up.sh $VPC_ID
 	exit
 fi
 
@@ -25,7 +26,7 @@ IGW_ID=$(aws ec2 create-internet-gateway --query InternetGateway.InternetGateway
 if [ ! $? -eq 0 ]
 then
 	echo "Can't create Internet Gateway"
-	./cleanup.sh $VPC_ID $Subnet_ID
+	./clean_up.sh $VPC_ID $Subnet_ID
 	exit
 fi
 
@@ -44,7 +45,7 @@ SG_ID=$(aws ec2 create-security-group --vpc-id $VPC_ID --group-name my-secgroup 
 if [ ! $? -eq 0 ]
 then
 	echo "Can't create SUBNET"
-	./cleanup.sh $VPC_ID $Subnet_ID $IGW_ID
+	./clean_up.sh $VPC_ID $Subnet_ID $IGW_ID
 	exit
 fi
 
@@ -72,14 +73,16 @@ Instance_ID=$(aws ec2 run-instances --image-id ami-09d56f8956ab235b3 --count 1 -
 if [ ! $? -eq 0 ]
 then
 	echo "Can't run the instance"
-	./cleanup.sh $VPC_ID $Subnet_ID $IGW_ID $SG_ID
+	./clean_up.sh $VPC_ID $Subnet_ID $IGW_ID $SG_ID
 	exit
 fi
 
 #Getting its Public IP addres
 Public_IP=$(aws ec2 describe-instances --instance-ids $Instance_Id --query Reservations[*].Instances[*].PublicIpAddress --output text)
 
-echo SUCCES!
+echo SUCCES!!!
+echo You can connect to it with IP Address:$Public_IP
+ 
 
 echo $VPC_ID > ids
 echo $Subnet_ID >> ids
@@ -88,4 +91,6 @@ echo $IGW_ID >> ids
 echo $SG_ID >> ids
 echo $Instance_ID >> ids 
 echo $Public_IP >> ids 
+
+
 
