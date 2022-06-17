@@ -230,7 +230,7 @@ function createInstance () {
 		--security-group-ids $securityGroupId \
 		--subnet-id $subnetId \
 		--associate-public-ip-address | grep "InstanceId" | cut -d '"' -f 4) && \
-	sleep 2 && \
+	aws ec2 wait instance-status-ok --instance-ids $instanceId && \
 	instancePublicIp=$(aws ec2 describe-instances \
 		--instance-id $instanceId | \
 		grep "PublicIpAddress" | \
