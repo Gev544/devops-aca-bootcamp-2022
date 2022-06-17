@@ -1,6 +1,5 @@
 #!/bin/bash
 
-set -e
 
 instanceID=`cat IDs.txt | tail -1`
 sgID=`cat IDs.txt |tail -3|head -1| cut -d '"' -f 4`
