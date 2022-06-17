@@ -15,7 +15,7 @@ name=$2
 check_for_error () {
 	return_value=$(echo $?)
 	if [[ $return_value != 0 ]]; then
-		echo -e "${Yellow}An error occured while $1, should delete everything now${Reset}"
+		echo -e "${Yellow}An error occured while $1\nshould delete everything now${Reset}"
 		delete_all "error"
 		exit 1
 	fi
