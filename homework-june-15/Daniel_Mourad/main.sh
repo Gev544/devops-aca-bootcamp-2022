@@ -83,9 +83,9 @@ function uploadObject () {
         --bucket $bucketName \
         --key $objectName \
         --body $objectName \
-        --output text > /dev/null
+        --output text > /dev/null && \
+    objectUrl="http://${bucketName}.s3.amazonaws.com/${objectName}" && \
     rm -f $objectName
-    objectUrl="http://${bucketName}.s3.amazonaws.com/${objectName}"
     if [[ $? != 0 ]]; then
         cleanUp
     else
@@ -130,32 +130,14 @@ function deleteInstance () {
 
 # Copies remote script and runs on remote server and downloads object from S3 on remote
 function runRemote () {
-    echo "Adding EC2 host key to known_hosts..."
-    ssh-keyscan $instancePublicIp >> ~/.ssh/known_hosts 2> /dev/null
-    if [[ $? != 0 ]]; then
-        cleanUp
-    else
-        echo "Done."
-    fi
-
-    echo "Copying ($remoteScript) to remote EC2 Instance..."
+    echo "Adding EC2 host key to known_hosts..." && \
+    ssh-keyscan $instancePublicIp >> ~/.ssh/known_hosts 2> /dev/null && \
+    echo "Copying ($remoteScript) to remote EC2 Instance..." && \
     scp -i ${sshKeyName}.pem ./${remoteScript} \
-        ${instanceUsername}@${instancePublicIp}:/home/${instanceUsername}/${remoteScript}
-    if [[ $? != 0 ]]; then
-        cleanUp
-    else
-        echo "Done."
-    fi
-
-    echo "Downloading ($objectName) on remote EC2 Instance..."
-    ssh -i ${sshKeyName}.pem ${instanceUsername}@${instancePublicIp} "wget --quiet $objectUrl"
-    if [[ $? != 0 ]]; then
-        cleanUp
-    else
-        echo "Done."
-    fi
-
-    echo "Running ($remoteScript) on remote EC2 Instance..."
+        ${instanceUsername}@${instancePublicIp}:/home/${instanceUsername}/${remoteScript} && \
+    echo "Downloading ($objectName) on remote EC2 Instance..." && \
+    ssh -i ${sshKeyName}.pem ${instanceUsername}@${instancePublicIp} "wget --quiet $objectUrl" && \
+    echo "Running ($remoteScript) on remote EC2 Instance..." && \
     ssh -i ${sshKeyName}.pem ${instanceUsername}@${instancePublicIp} \
         "sudo bash /home/${instanceUsername}/${remoteScript}"
     if [[ $? != 0 ]]; then
@@ -168,13 +150,13 @@ function runRemote () {
 
 # Cleans up if something goes wrong
 function cleanUp () {
-    set +e
     echo "Something went wrong."
     echo "Cleaning up..."
     aws s3api delete-object --bucket $bucketName --key $objectName
     aws s3api delete-bucket --bucket $bucketName --region $bucketRegion
-    ./ec2.sh --delete $projectName
+    ./ec2.sh --delete $projectName > /dev/null
     echo "Done."
+    exit 1
 }
 
 
