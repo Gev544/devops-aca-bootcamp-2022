@@ -20,10 +20,6 @@ instancePublicIp=
 remoteScript="remote.sh"
 
 
-
-
-
-
 # Creates Bucket with above defined variables using as arguments
 function createBucket () {
     echo "Creating bucket ($bucketName) in ($bucketRegion)..."
@@ -34,7 +30,7 @@ function createBucket () {
         --acl $bucketAcl \
         --output text)
     if [[ $? != 0 ]]; then
-        echo "Something went wrong."
+        cleanUp
     else
         echo "Done."
         echo "You can find your bucket at $bucketUrl"
@@ -49,7 +45,7 @@ function deleteBucket () {
         --bucket $bucketName \
         --region $bucketRegion
     if [[ $? != 0 ]]; then
-        echo "Something went wrong."
+        cleanUp
     else
         echo "Done."
     fi
@@ -72,7 +68,7 @@ function generateHtml () {
 </body>
 </html>" > $objectName
     if [[ $? != 0 ]]; then
-        echo "Something went wrong."
+        cleanUp
     else
         echo "Done."
     fi
@@ -91,7 +87,7 @@ function uploadObject () {
     rm -f $objectName
     objectUrl="http://${bucketName}.s3.amazonaws.com/${objectName}"
     if [[ $? != 0 ]]; then
-        echo "Something went wrong."
+        cleanUp
     else
         echo "Done."
         echo "You can find your object at $objectUrl"
@@ -106,7 +102,7 @@ function deleteObject () {
         --bucket $bucketName \
         --key $objectName
     if [[ $? != 0 ]]; then
-        echo "Something went wrong."
+        cleanUp
     else
         echo "Done."
     fi
@@ -118,7 +114,7 @@ function runInstance () {
     ./ec2.sh --create $projectName
     instancePublicIp=$(grep "ip-" $resourceIds | cut -d "-" -f 2)
     if [[ $? != 0 ]]; then
-        echo "Something went wrong."
+        cleanUp
     fi
 }
 
@@ -127,7 +123,7 @@ function runInstance () {
 function deleteInstance () {
     ./ec2.sh --delete $projectName
     if [[ $? != 0 ]]; then
-        echo "Something went wrong."
+        cleanUp
     fi
 }
 
@@ -135,29 +131,61 @@ function deleteInstance () {
 # Copies remote script and runs on remote server and downloads object from S3 on remote
 function runRemote () {
     echo "Adding EC2 host key to known_hosts..."
-    ssh-keyscan $instancePublicIp >> ~/.ssh/known_hosts 2> /dev/null && \
-    echo "Done."
+    ssh-keyscan $instancePublicIp >> ~/.ssh/known_hosts 2> /dev/null
+    if [[ $? != 0 ]]; then
+        cleanUp
+    else
+        echo "Done."
+    fi
 
     echo "Copying ($remoteScript) to remote EC2 Instance..."
     scp -i ${sshKeyName}.pem ./${remoteScript} \
         ${instanceUsername}@${instancePublicIp}:/home/${instanceUsername}/${remoteScript}
-    echo "Done."
+    if [[ $? != 0 ]]; then
+        cleanUp
+    else
+        echo "Done."
+    fi
 
     echo "Downloading ($objectName) on remote EC2 Instance..."
     ssh -i ${sshKeyName}.pem ${instanceUsername}@${instancePublicIp} "wget --quiet $objectUrl"
-    echo "Done."
+    if [[ $? != 0 ]]; then
+        cleanUp
+    else
+        echo "Done."
+    fi
 
     echo "Running ($remoteScript) on remote EC2 Instance..."
     ssh -i ${sshKeyName}.pem ${instanceUsername}@${instancePublicIp} \
         "sudo bash /home/${instanceUsername}/${remoteScript}"
+    if [[ $? != 0 ]]; then
+        cleanUp
+    else
+        echo "Done."
+    fi
+}
+
+
+# Cleans up if something goes wrong
+function cleanUp () {
+    set +e
+    echo "Something went wrong."
+    echo "Cleaning up..."
+    aws s3api delete-object --bucket $bucketName --key $objectName
+    aws s3api delete-bucket --bucket $bucketName --region $bucketRegion
+    ./ec2.sh --delete $projectName
     echo "Done."
 }
 
 
-
-
-
-
-#createBucket && generateHtml && uploadObject && runInstance && runRemote
-
-deleteObject && deleteBucket && deleteInstance
+if [[ $1 = "--create" ]]; then
+    createBucket && \
+    generateHtml && \
+    uploadObject && \
+    runInstance && \
+    runRemote
+elif [[ $1 = "--delete" ]]; then
+    deleteObject && \
+    deleteBucket && \
+    deleteInstance
+fi
