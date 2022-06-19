@@ -1,8 +1,9 @@
 usage
 ```
-./run-aws.sh [option]
+./run-aws.sh [option] 
+or 
+./function-BONUS-mode.sh [option]
 ```
-
 options:
 
 create - Creating ec2 instance with all necessary resources
