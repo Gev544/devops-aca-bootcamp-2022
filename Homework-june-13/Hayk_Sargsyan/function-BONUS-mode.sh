@@ -330,32 +330,34 @@ check-status () {
 	then
    		delete-keys && vpc && subnet1 && subnet2 && gateway && attach-gateway && route-table &&\
 		points-route-table && associate-subnet && create-keys && security-group && authorize-sg &&\
-		launch-instance && check-status
+		launch-instance && check-status 
+		echo -e "$vpcID\n$subnet1_ID\n$subnet2_ID\n$igwID\n$rtID\n$rtassocID\n$sgID\n$instanceID" > fun-IDs.txt
 	elif [[ $1 = "delete" ]]
 	then
 		aws ec2 terminate-instances \
-			--instance-ids $instanceID
+			--instance-ids $(cat fun-IDs.txt | grep i-) 
 		echo "Terminating INSTANCE !"
 		aws ec2 wait instance-terminated \
-			--instance-ids $instanceID
+			--instance-ids $(cat fun-IDs.txt | grep i-)
 		aws ec2 delete-security-group \
-                        --group-id $sgID
+			--group-id $(cat fun-IDs.txt | grep sg-)
                 delete-keys
                 aws ec2 disassociate-route-table \
-                        --association-id $rtassocID
-                aws ec2 delete-route-table \
-                        --route-table-id $rtID
+			--association-id $(cat fun-IDs.txt | grep rtbassoc-)
+		aws ec2 delete-route-table \
+			--route-table-id $(cat fun-IDs.txt | grep rtb-)
                 aws ec2 detach-internet-gateway \
-                        --internet-gateway-id $igwID \
-                        --vpc-id $vpcID
+			--internet-gateway-id $(cat fun-IDs.txt | grep igw-) \
+			--vpc-id $(cat fun-IDs.txt | grep vpc-)
                 aws ec2 delete-internet-gateway \
-                        --internet-gateway-id $igwID
+			--internet-gateway-id $(cat fun-IDs.txt | grep igw-)
                 aws ec2 delete-subnet \
-                        --subnet-id $subnet1_ID
+			--subnet-id $(cat fun-IDs.txt | grep subnet- | head -1)
                 aws ec2 delete-subnet \
-                        --subnet-id $subnet2_ID
+			--subnet-id $(cat fun-IDs.txt | grep subnet- | tail -1)
                 aws ec2 delete-vpc \
-                        --vpc-id $vpcID
+			--vpc-id $(cat fun-IDs.txt | grep vpc-)
 		echo "Everythig is deleted"
+		rm -f fun-IDs.txt
 	else echo -e "Invalid Argument \n create / delete "
 	fi
