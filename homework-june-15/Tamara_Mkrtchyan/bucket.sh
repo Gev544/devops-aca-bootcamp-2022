@@ -19,12 +19,12 @@ objectName="index.html"
 check_for_error () {
 	if [[ $? != 0 ]]; then
 		echo -e "${Yellow}An error occured while $1\nshould delete everything now${Reset}"
-		aws s3api delete-object \
-		--key nginx_install.sh \
-		--bucket $objectName
 		aws s3api delete-bucket \
 		--bucket $bucketName \
-		--region $bucketRegion
+		--region $bucketRegion && \
+		aws s3api wait bucket-not-exists \
+		--bucket $bucketName
+		echo -e "${Red}$bucketName deleted !${Reset}"
 		exit 1
 	fi
 }
@@ -70,6 +70,7 @@ upload_file () {
 	--body $objectName \
 	--content-language html \
 	--output text >/dev/null && \
+	check_for_error "uploading a file to bucket"
 	echo -e "${Yellow}Waiting for $objectName to upload...${Reset}"
 	aws s3api wait object-exists \
 	--bucket $bucketName \
@@ -91,4 +92,12 @@ create_ec2 () {
 	aws ec2 wait instance-status-ok \
 		--instance-ids $instanceId
 	echo -e "${Green}$name instance is up and running !${Reset}"
+}
+
+delete_object () {
+
+}
+
+delete_bucket () {
+
 }
