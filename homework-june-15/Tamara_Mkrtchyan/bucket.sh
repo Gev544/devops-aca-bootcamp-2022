@@ -115,8 +115,8 @@ config_ec2 () {
 # run the nginx installation and configuration script
 }
 
-if [[ $command = "--create" ]]; then
+if [[ $command = "--create" ]] && [[ ! -z $name ]]; then
 # 
-elif [[ $command = "--delete" ]]; then
+elif [[ $command = "--delete" ]] && [[ ! -z $name ]]; then
 # 
 fi
