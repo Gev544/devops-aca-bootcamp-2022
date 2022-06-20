@@ -198,9 +198,9 @@ create_ec2 () {
 
 # Getting the public IP
 	publicIp=$(aws ec2 describe-instances \
-			--instance-id $instanceId | \
-			grep "PublicIpAddress" | \
-			cut -d '"' -f 4)  && \
+			--instance-id $instanceId \
+			--query 'Reservations[*].Instances[*].PublicIpAddress' \
+			--output text) && \
 			echo -e "${Yellow}Your Public IP is ${publicIp}${Reset}"
 
 	echo -e "${Blue}---------------------------------------------------${Reset}"
