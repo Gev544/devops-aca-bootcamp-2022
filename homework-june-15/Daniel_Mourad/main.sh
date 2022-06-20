@@ -7,7 +7,7 @@ bucketAcl="public-read"
 bucketUrl=
 
 # Object related variables
-objectName="helloworld.html"
+objectName="index.html"
 objectAcl="public-read"
 
 # EC2 related variables
@@ -17,7 +17,9 @@ sshKeyName="${projectName}-ec2-key"
 instanceUsername="ubuntu"
 instancePublicIp=
 
+# Other scripts
 remoteScript="remote.sh"
+websiteScript="website.sh"
 
 
 # Creates Bucket with above defined variables using as arguments
@@ -132,9 +134,11 @@ function deleteInstance () {
 function runRemote () {
     echo "Adding EC2 host key to known_hosts..." && \
     ssh-keyscan $instancePublicIp >> ~/.ssh/known_hosts 2> /dev/null && \
-    echo "Copying ($remoteScript) to remote EC2 Instance..." && \
+    echo "Copying ($remoteScript) and ($websiteScript) to remote EC2 Instance..." && \
     scp -i ${sshKeyName}.pem ./${remoteScript} \
         ${instanceUsername}@${instancePublicIp}:/home/${instanceUsername}/${remoteScript} && \
+    scp -i ${sshKeyName}.pem ./${websiteScript} \
+        ${instanceUsername}@${instancePublicIp}:/home/${instanceUsername}/${websiteScript} && \
     echo "Downloading ($objectName) on remote EC2 Instance..." && \
     ssh -i ${sshKeyName}.pem ${instanceUsername}@${instancePublicIp} "wget --quiet $objectUrl" && \
     echo "Running ($remoteScript) on remote EC2 Instance..." && \
@@ -154,7 +158,7 @@ function cleanUp () {
     echo "Cleaning up..."
     aws s3api delete-object --bucket $bucketName --key $objectName
     aws s3api delete-bucket --bucket $bucketName --region $bucketRegion
-    ./ec2.sh --delete $projectName > /dev/null
+    ./ec2.sh --delete $projectName
     echo "Done."
     exit 1
 }
