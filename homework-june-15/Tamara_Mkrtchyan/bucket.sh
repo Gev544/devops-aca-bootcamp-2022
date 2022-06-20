@@ -108,10 +108,6 @@ delete_ec2 () {
 
 }
 
-delete_instance () {
-
-}
-
 config_ec2 () {
 # add ec2 host key to our known hosts file (ssh-keyscan)
 # copy nginx installation and configuration script to ec2 (scp)
