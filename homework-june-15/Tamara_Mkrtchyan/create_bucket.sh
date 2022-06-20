@@ -7,11 +7,12 @@ Yellow='\033[0;33m'
 Blue='\033[0;34m'
 Reset='\033[0m'
 
-bucketName=$2-bucket-aca
+command=$1
+name=$2
+bucketName=$name-bucket-aca
 bucketRegion="us-east-1"
-bucketAcl="public-read"
-
-helloWorld="index.html"
+aclValue="public-read"
+objectName="index.html"
 
 # this function is being called after every command to check for a return value
 # if the return value is not success then it deletes previously created all resources
@@ -20,7 +21,7 @@ check_for_error () {
 		echo -e "${Yellow}An error occured while $1\nshould delete everything now${Reset}"
 		aws s3api delete-object \
 		--key nginx_install.sh \
-		--bucket $helloWorld
+		--bucket $objectName
 		aws s3api delete-bucket \
 		--bucket $bucketName \
 		--region $bucketRegion
@@ -30,14 +31,19 @@ check_for_error () {
 
 # check and add error msg, bucket name should be unique
 create_bucket () {
-bucketUrl=$(aws s3api create-bucket \
-		--acl $bucketAcl \
-		--bucket $bucketName \
-		--region $bucketRegion)
-if [[ $? == 254 ]]; then
-	echo -e "The requested bucket name is not available.\nThe bucket namespace is shared by all users of the system.\nPlease select a different name and try again."
-fi
-echo -e "${Green}${bucketName} created successfully !${Reset}"
+	bucketUrl=$(aws s3api create-bucket \
+			--acl $aclValue \
+			--bucket $bucketName \
+			--region $bucketRegion)
+	if [[ $? == 254 ]]; then
+		echo -e "The requested bucket name is not available.\n\
+		The bucket namespace is shared by all users of the system.\n\
+		Please select a different name and try again."
+	fi
+	echo -e "${Yellow}Waiting for bucket exisitng confirmation..${Reset}"
+	aws s3api wait bucket-exists \
+		--bucket $bucketName
+	echo -e "${Green}${bucketName} created successfully !${Reset}"
 }
 
 create_html () {
@@ -52,23 +58,37 @@ create_html () {
 <body>
 	<h1>Hello World!</h1>
 </body>
-</html>" > $helloWorld
+</html>" > $objectName
 }
 
 # copying the index.html file to our new bucket
-aws s3 cp ./index.html s3://$2-bucket
+upload_file () {
+	aws s3api put-object \
+	--bucket $bucketName \
+	--acl $aclValue \
+	--key $objectName \
+	--body $objectName \
+	--content-language html \
+	--output text >/dev/null && \
+	echo -e "${Yellow}Waiting for $objectName to upload...${Reset}"
+	aws s3api wait object-exists \
+	--bucket $bucketName \
+	--key $objectName && \
+	objectUrl="http://$bucketName.s3.amazonaws.com/$objectName"
+	echo -e "${Green}$objectName uploaded successfully !${Reset}"
+}
 
 # creating ec2 instance
-./aws_ec2 --create $name
-
-instanceId=$(grep "i-" $name-ids)
-publicIp=$(aws ec2 describe-instances \
-			--instance-id $instanceId \
-			--query 'Reservations[*].Instances[*].PublicIpAddress' \
-			--output text)
-
-# waiting for the instance state to be OK, so we can ssh into it
-echo -e "${Yellow}waiting for an instance to start...${Reset}"
-aws ec2 wait instance-status-ok \
-	--instance-ids $instanceId
-
+create_ec2 () {
+	./aws_ec2 --create $name
+	instanceId=$(grep "i-" $name-ids)
+	publicIp=$(aws ec2 describe-instances \
+				--instance-id $instanceId \
+				--query 'Reservations[*].Instances[*].PublicIpAddress' \
+				--output text)
+	# waiting for the instance state to be OK, so we can work with it
+	echo -e "${Yellow}waiting for an instance to start...${Reset}"
+	aws ec2 wait instance-status-ok \
+		--instance-ids $instanceId
+	echo -e "${Green}$name instance is up and running !${Reset}"
+}
