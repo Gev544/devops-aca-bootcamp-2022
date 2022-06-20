@@ -19,6 +19,8 @@ objectName="index.html"
 check_for_error () {
 	if [[ $? != 0 ]]; then
 		echo -e "${Yellow}An error occured while $1\nshould delete everything now${Reset}"
+		# delete html file if it exists with
+		# aws s3api get-object --bucket $bucketName --key $objectName /dev/null >/dev/null; echo $?
 		aws s3api delete-bucket \
 		--bucket $bucketName \
 		--region $bucketRegion && \
@@ -101,3 +103,24 @@ delete_object () {
 delete_bucket () {
 
 }
+
+delete_ec2 () {
+
+}
+
+delete_instance () {
+
+}
+
+config_ec2 () {
+# add ec2 host key to our known hosts file (ssh-keyscan)
+# copy nginx installation and configuration script to ec2 (scp)
+# download index.html on instance
+# run the nginx installation and configuration script
+}
+
+if [[ $command = "--create" ]]; then
+# 
+elif [[ $command = "--delete" ]]; then
+# 
+fi
