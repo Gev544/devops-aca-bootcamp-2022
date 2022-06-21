@@ -63,7 +63,7 @@ function configureNginx () {
 # Makes website script to work as a daemon
 function setupWebsite () {
 	mkdir -p /opt/${projectName} && \
-	cp /home/${instanceUsername}/${websiteScript} /opt/${projectName}/${websiteScript} && \
+	mv /home/${instanceUsername}/${websiteScript} /opt/${projectName}/${websiteScript} && \
 	echo -e "[Unit]
 Description=ACA Homework June 15 Website
 After=network.target
