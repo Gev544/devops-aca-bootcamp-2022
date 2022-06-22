@@ -218,9 +218,7 @@ fi
      aws ec2 create-key-pair \
 	     --key-name autoKeyPair \
 	     --query "KeyMaterial" \
-	     --output text > KeyPair.pem \
-	     --query "KeyPairId" \
-	     --output text >> AWS.txt
+	     --output text > KeyPair.pem
 	     chmod 400 KeyPair.pem
 	     echo "Key Pair is created"
 
