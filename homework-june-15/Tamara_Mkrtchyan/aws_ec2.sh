@@ -7,14 +7,13 @@ Yellow='\033[0;33m'       # Yellow
 Blue='\033[0;34m'         # Blue
 Reset='\033[0m'           # Text Reset
 
-command=$1
+option=$1
 name=$2
 
 # this function is being called after every command to check for a return value
 # if the return value is not success then it deletes previously created all resources
 check_for_error () {
-	return_value=$(echo $?)
-	if [[ $return_value != 0 ]]; then
+	if [[ $? != 0 ]]; then
 		echo -e "${Yellow}An error occured while $1\nshould delete everything now${Reset}"
 		delete_all "error"
 		exit 1
@@ -73,6 +72,7 @@ delete_all () {
 
 	rm -f $name-ids && \
 	echo -e "${Red}Temporary files are deleted${Reset}"
+	unset vpcId subnetId igwId rtbId sgId instanceId publicIp name option
 	echo -e "${Green}----------------------------------${Reset}"
 	echo -e "${Green}THANK YOU FOR USING OUR SERVICES:)${Reset}"
 	echo -e "${Green}----------------------------------${Reset}"
@@ -216,13 +216,13 @@ create_ec2 () {
 }
 
 # the program starts here
-if [[ $command = "--create" ]] && [[ ! -z $name ]]; then
+if [[ $option = "--create" ]] && [[ ! -z $name ]]; then
 	if [[ -f "$name-ids" ]]; then
 		echo -e "${Red}${name} already exists${Reset}"
 	else
 		create_ec2
 	fi
-elif [[ $command = "--delete" ]] && [[ ! -z $name ]]; then
+elif [[ $option = "--delete" ]] && [[ ! -z $name ]]; then
 	if [[ -f "$name-ids" ]]; then
 		delete_all
 	else

@@ -7,26 +7,43 @@ Yellow='\033[0;33m'
 Blue='\033[0;34m'
 Reset='\033[0m'
 
-command=$1
+option=$1
 name=$2
-bucketName=$name-bucket-aca
+bucketName="$name-bucket-aca"
 bucketRegion="us-east-1"
 aclValue="public-read"
 objectName="index.html"
+
+delete_objects () {
+# get all s3 objects listed
+	aws s3api list-objects --bucket $bucketName --query 'Contents[].{Key: Key}' --output text > ./s3_obj_list
+# recoursively delete all the objects in s3 bucket
+	if [[ $(cat ./s3_obj_list) == "None" ]]; then
+		for obj in $(cat ./s3_obj_list); do
+			aws s3api delete-object --bucket $bucketName --key $obj && \
+			aws s3api wait object-not-exists --bucket $bucketName --key $obj
+			echo -e "${Red}$obj file from s3 is deleted${Reset}"
+		done
+		rm ./s3_obj_list
+	fi
+}
+
+delete_bucket () {
+	aws s3api delete-bucket \
+		--bucket $bucketName \
+		--region $bucketRegion && \
+	aws s3api wait bucket-not-exists \
+		--bucket $bucketName
+		echo -e "${Red}$bucketName deleted !${Reset}"
+}
 
 # this function is being called after every command to check for a return value
 # if the return value is not success then it deletes previously created all resources
 check_for_error () {
 	if [[ $? != 0 ]]; then
 		echo -e "${Yellow}An error occured while $1\nshould delete everything now${Reset}"
-		# delete html file if it exists with
-		# aws s3api get-object --bucket $bucketName --key $objectName /dev/null >/dev/null; echo $?
-		aws s3api delete-bucket \
-		--bucket $bucketName \
-		--region $bucketRegion && \
-		aws s3api wait bucket-not-exists \
-		--bucket $bucketName
-		echo -e "${Red}$bucketName deleted !${Reset}"
+		delete_objects && \
+		delete_bucket && \
 		exit 1
 	fi
 }
@@ -38,9 +55,13 @@ create_bucket () {
 			--bucket $bucketName \
 			--region $bucketRegion)
 	if [[ $? == 254 ]]; then
-		echo -e "The requested bucket name is not available.\n\
+		echo -e "${Red}The requested bucket name is not available.\n\
 		The bucket namespace is shared by all users of the system.\n\
-		Please select a different name and try again."
+		Please select a different name and try again.${Reset}"
+		exit 1
+	elif [[ $? != 0 ]]; then
+		echo -e "${Red}An error occured while creating the bucket${Reset}"
+		exit 1
 	fi
 	echo -e "${Yellow}Waiting for bucket exisitng confirmation..${Reset}"
 	aws s3api wait bucket-exists \
@@ -66,29 +87,25 @@ create_html () {
 # copying the index.html file to our new bucket
 upload_file () {
 	aws s3api put-object \
-	--bucket $bucketName \
-	--acl $aclValue \
-	--key $objectName \
-	--body $objectName \
-	--content-language html \
-	--output text >/dev/null && \
+		--bucket $bucketName \
+		--acl $aclValue \
+		--key $objectName \
+		--body $objectName \
+		--content-language html \
+		--output text >/dev/null && \
 	check_for_error "uploading a file to bucket"
 	echo -e "${Yellow}Waiting for $objectName to upload...${Reset}"
 	aws s3api wait object-exists \
-	--bucket $bucketName \
-	--key $objectName && \
+		--bucket $bucketName \
+		--key $objectName && \
 	objectUrl="http://$bucketName.s3.amazonaws.com/$objectName"
-	echo -e "${Green}$objectName uploaded successfully !${Reset}"
+	echo -e "${Green}$objectName uploaded successfully ! -> ${Blue}${objectUrl}${Reset}"
 }
 
 # creating ec2 instance
 create_ec2 () {
 	./aws_ec2 --create $name
-	instanceId=$(grep "i-" $name-ids)
-	publicIp=$(aws ec2 describe-instances \
-				--instance-id $instanceId \
-				--query 'Reservations[*].Instances[*].PublicIpAddress' \
-				--output text)
+	check_for_error "creating an instance"
 	# waiting for the instance state to be OK, so we can work with it
 	echo -e "${Yellow}waiting for an instance to start...${Reset}"
 	aws ec2 wait instance-status-ok \
@@ -96,27 +113,29 @@ create_ec2 () {
 	echo -e "${Green}$name instance is up and running !${Reset}"
 }
 
-delete_object () {
-
-}
-
-delete_bucket () {
-
-}
-
 delete_ec2 () {
-
+	./aws_ec2 --delete $name
+	unset ec2User ec2Id ec2PublicIp
 }
 
 config_ec2 () {
+	ec2User="ubuntu"
+	ec2Id=$(grep "i-" $name-ids)
+	ec2PublicIp=$(aws ec2 describe-instances \
+	--instance-id $instanceId \
+	--query 'Reservations[*].Instances[*].PublicIpAddress' \
+	--output text)
 # add ec2 host key to our known hosts file (ssh-keyscan)
+	ssh-keyscan $ec2publicIp >> ~/.ssh/known_hosts
 # copy nginx installation and configuration script to ec2 (scp)
+	# scp -i $name-keypair.pem $ec2Remote
 # download index.html on instance
 # run the nginx installation and configuration script
 }
 
-if [[ $command = "--create" ]] && [[ ! -z $name ]]; then
+if [[ $option == "--create" ]] && [[ ! -z $name ]]; then
 # 
-elif [[ $command = "--delete" ]] && [[ ! -z $name ]]; then
+elif [[ $option == "--delete" ]] && [[ ! -z $name ]]; then
 # 
+unset option name bucketName bucketRegion aclValue objectName
 fi
