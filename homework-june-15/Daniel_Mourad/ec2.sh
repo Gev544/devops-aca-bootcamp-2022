@@ -329,6 +329,7 @@ function showResourceIds () {
 	echo "Security Group ID -> $securityGroupId"
 	echo "Instance ID -> $instanceId"
 	echo "Public IPv4 Address -> $instancePublicIp" 
+	echo " "
 	echo -e "$vpcId\n$subnetId\n$internetGatewayId\n$routeTableId\n$securityGroupId\n$instanceId\nip-$instancePublicIp" > $resourceIds
 }
 

@@ -3,12 +3,12 @@
 # Bucket related variables
 bucketName="aca-homework"
 bucketRegion="eu-central-1"
-bucketAcl="public-read"
+bucketAcl="private"
 bucketUrl=
 
 # Object related variables
 objectName="index.html"
-objectAcl="public-read"
+objectAcl="private"
 
 # EC2 related variables
 projectName="aca-homework"
@@ -21,10 +21,15 @@ instancePublicIp=
 remoteScript="remote.sh"
 websiteScript="website.sh"
 
+# IAM related variables
+iamUserName="aca-homework"
+iamUserPermission="arn:aws:iam::aws:policy/AmazonS3FullAccess"
+iamUserCredentialsFile="${iamUserName}-credentials.csv"
+
 
 # Creates Bucket with above defined variables using as arguments
 function createBucket () {
-    echo "Creating bucket ($bucketName) in ($bucketRegion)..."
+    echo "Creating S3 bucket ($bucketName) in region ($bucketRegion)..."
     bucketUrl=$(aws s3api create-bucket \
         --bucket $bucketName \
         --region $bucketRegion \
@@ -42,7 +47,7 @@ function createBucket () {
 
 # Deletes Bucket using name and region
 function deleteBucket () {
-    echo "Deleting bucket ($bucketName) from ($bucketRegion)..."
+    echo "Deleting S3 bucket ($bucketName) from region ($bucketRegion)..."
     aws s3api delete-bucket \
         --bucket $bucketName \
         --region $bucketRegion
@@ -79,7 +84,7 @@ function generateHtml () {
 
 # Uploads object to bucket and deletes from local
 function uploadObject () {
-    echo "Uploading object ($objectName) to bucket ($bucketName)..."
+    echo "Uploading object ($objectName) to S3 bucket ($bucketName)..."
     aws s3api put-object \
         --acl $objectAcl \
         --bucket $bucketName \
@@ -99,7 +104,7 @@ function uploadObject () {
 
 # Deletes object from bucket
 function deleteObject () {
-    echo "Deleting object ($objectName) from bucket ($bucketName)..."
+    echo "Deleting object ($objectName) from S3 bucket ($bucketName)..."
     aws s3api delete-object \
         --bucket $bucketName \
         --key $objectName
@@ -108,6 +113,54 @@ function deleteObject () {
     else
         echo "Done."
     fi
+}
+
+
+# Creates IAM user
+function createUser () {
+    echo "Creating IAM user ($iamUserName)..."
+    aws iam create-user \
+        --user-name $iamUserName \
+        --permissions-boundary $iamUserPermission \
+        --output text > /dev/null
+    if [[ $? != 0 ]]; then
+        cleanUp
+    else
+        echo "Done."
+    fi
+}
+
+
+# Creates Access Key for IAM user
+function createAccessKey () {
+    echo "Creating Access Key for user ($iamUserName)..."
+    aws iam create-access-key \
+        --user-name $iamUserName \
+        --output text > $iamUserCredentialsFile && \
+    accessKeyId=$(cat $iamUserCredentialsFile | cut -d "	" -f 2) && \
+    accessKeySecret=$(cat $iamUserCredentialsFile | cut -d "	" -f 4) && \
+    echo "Done."
+}
+
+
+# Deletes Access Key of IAM user
+function deleteAccessKey () {
+    echo "Deleting Access Key of user ($iamUserName)..."
+    accessKeyId=$(cat $iamUserCredentialsFile | cut -d "	" -f 2) && \
+    aws iam delete-access-key \
+        --user-name $iamUserName \
+        --access-key-id $accessKeyId && \
+    rm -f $iamUserCredentialsFile && \
+    echo "Done."
+}
+
+
+# Deletes IAM user
+function deleteUser () {
+    echo "Deleting IAM user ($iamUserName)..."
+    aws iam delete-user \
+        --user-name $iamUserName
+    echo "Done."
 }
 
 
@@ -139,11 +192,9 @@ function runRemote () {
         ${instanceUsername}@${instancePublicIp}:/home/${instanceUsername}/${remoteScript} && \
     scp -i ${sshKeyName}.pem ./${websiteScript} \
         ${instanceUsername}@${instancePublicIp}:/home/${instanceUsername}/${websiteScript} && \
-    echo "Downloading ($objectName) on remote EC2 Instance..." && \
-    ssh -i ${sshKeyName}.pem ${instanceUsername}@${instancePublicIp} "wget --quiet $objectUrl" && \
     echo "Running ($remoteScript) on remote EC2 Instance..." && \
     ssh -i ${sshKeyName}.pem ${instanceUsername}@${instancePublicIp} \
-        "sudo bash /home/${instanceUsername}/${remoteScript}"
+        "sudo bash /home/${instanceUsername}/${remoteScript} ${accessKeyId}:${accessKeySecret}"
     if [[ $? != 0 ]]; then
         cleanUp
     else
@@ -159,6 +210,8 @@ function cleanUp () {
     aws s3api delete-object --bucket $bucketName --key $objectName
     aws s3api delete-bucket --bucket $bucketName --region $bucketRegion
     ./ec2.sh --delete $projectName
+    deleteAccessKey
+    deleteUser
     echo "Done."
     exit 1
 }
@@ -168,10 +221,14 @@ if [[ $1 = "--create" ]]; then
     createBucket && \
     generateHtml && \
     uploadObject && \
+    createUser && \
+    createAccessKey && \
     runInstance && \
     runRemote
 elif [[ $1 = "--delete" ]]; then
     deleteObject && \
     deleteBucket && \
+    deleteAccessKey && \
+    deleteUser && \
     deleteInstance
 fi
