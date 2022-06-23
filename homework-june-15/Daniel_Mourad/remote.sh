@@ -1,11 +1,13 @@
 #!/bin/bash
 
-projectName="aca-homework"
-instanceUsername="ubuntu"
-websiteScript="website.sh"
-bucketName="aca-homework"
+# This is the remote script which will be executed by by main script
+
+projectName=$1
+instanceUsername=$2
+websiteScript=$3
+bucketName=$4
+accessKeyIdAndSecret=$5
 webServerPath="/var/www/${projectName}"
-accessKeyIdAndSecret=$1
 
 
 # Checks if Nginx is installed or not, if not installs

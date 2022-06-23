@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+# This script will create the VPC, Subnet, Internet Gateway, Route Table, Security Group and EC2 Instance
 
 # Name of the project which will user run script with
 projectName=$2
@@ -35,16 +35,17 @@ sshKeyName="${projectName}-ec2-key"
 resourceIds="${projectName}-resources.txt"
 
 
+
 # Creates VPC with projects's name and CIDR block and assigns the ID to $vpcId
 function createVPC () {
-	set +e
-	echo "Creating VPC ($vpcName) with ($vpcCIDRBlock) CIDR Block..."
+	echo "Creating VPC ($vpcName) with ($vpcCIDRBlock) CIDR block..."
 	vpcId=$(aws ec2 create-vpc \
 		--tag-specification 'ResourceType=vpc,Tags=[{Key=Name,Value='$vpcName'}]' \
 		--cidr-block $vpcCIDRBlock \
 		--query Vpc.VpcId \
 		--output text)
 	if [[ $? != 0 ]]; then
+		echo "Something went wrong."
 		cleanUp
 	else 
 		echo "Done."
@@ -54,8 +55,7 @@ function createVPC () {
 
 # Creates Subnet with projects's name and CIDR block and assigns the ID to $subnetId
 function createSubnet () {
-	set +e
-	echo "Creating Subnet ($subnetName) with ($subnetCIDRBlock) CIDR Block..."
+	echo "Creating Subnet ($subnetName) with ($subnetCIDRBlock) CIDR block..."
 	subnetId=$(aws ec2 create-subnet \
 		--tag-specification 'ResourceType=subnet,Tags=[{Key=Name,Value='$subnetName'}]' \
 		--vpc-id $vpcId \
@@ -63,6 +63,7 @@ function createSubnet () {
 		--query Subnet.SubnetId \
 		--output text)
 	if [[ $? != 0 ]]; then
+		echo "Something went wrong."
 		cleanUp
 	else 
 		echo "Done."
@@ -72,13 +73,13 @@ function createSubnet () {
 
 # Creates Internet Gateway with projects's name and assigns the ID to $InternetGatewayId
 function createInternetGateway () {
-	set +e
 	echo "Creating Internet Gateway ($internetGatewayName)..."
 	internetGatewayId=$(aws ec2 create-internet-gateway \
 		--tag-specification 'ResourceType=internet-gateway,Tags=[{Key=Name,Value='$internetGatewayName'}]' \
 		--query InternetGateway.InternetGatewayId \
 		--output text)
 	if [[ $? != 0 ]]; then
+		echo "Something went wrong."
 		cleanUp
 	else 
 		echo "Done."
@@ -88,13 +89,13 @@ function createInternetGateway () {
 
 # Attaches Internet Gateway to the VPC
 function attachInternetGatewayToVpc () {
-	set +e
 	echo "Attaching Internet Gateway ($internetGatewayName) to VPC ($vpcName)..."
 	aws ec2 attach-internet-gateway \
 		--vpc-id $vpcId \
 		--internet-gateway-id $internetGatewayId \
 		--output text > /dev/null
 	if [[ $? != 0 ]]; then
+		echo "Something went wrong."
 		cleanUp
 	else 
 		echo "Done."
@@ -104,7 +105,6 @@ function attachInternetGatewayToVpc () {
 
 # Creates Route Table with projects's name in VPC and assigns the ID to $routeTableId
 function createRouteTable () {
-	set +e
 	echo "Creating Route Table ($routeTableName) in VPC ($vpcName)..."
 	routeTableId=$(aws ec2 create-route-table \
 		--tag-specification 'ResourceType=route-table,Tags=[{Key=Name,Value='$routeTableName'}]' \
@@ -112,6 +112,7 @@ function createRouteTable () {
 		--query RouteTable.RouteTableId \
 		--output text)
 	if [[ $? != 0 ]]; then
+		echo "Something went wrong."
 		cleanUp
 	else 
 		echo "Done."
@@ -121,14 +122,14 @@ function createRouteTable () {
 
 # Creates Route from Internet Gateway to anywhere
 function createRoute () {
-	set +e
-	echo "Creating Route from ($internetGatewayName) to (0.0.0.0/0)..."
+	echo "Creating route from ($internetGatewayName) to (0.0.0.0/0)..."
 	aws ec2 create-route \
 		--route-table-id $routeTableId \
 		--destination-cidr-block 0.0.0.0/0 \
 		--gateway-id $internetGatewayId \
 		--output text > /dev/null
 	if [[ $? != 0 ]]; then
+		echo "Something went wrong."
 		cleanUp
 	else 
 		echo "Done."
@@ -138,13 +139,13 @@ function createRoute () {
 
 # Associates the Route Table with Subnet
 function associateRouteTable () {
-	set +e
 	echo "Associating Route Table ($routeTableName) with Subnet ($subnetName)..."
 	aws ec2 associate-route-table \
 		--subnet-id $subnetId \
 		--route-table-id $routeTableId \
 		--output text > /dev/null
 	if [[ $? != 0 ]]; then
+		echo "Something went wrong."
 		cleanUp
 	else 
 		echo "Done."
@@ -154,7 +155,6 @@ function associateRouteTable () {
 
 # Creates Security Group with projects's name in VPC and assigns the ID to $securityGroupId
 function createSecurityGroup () {
-	set +e
 	echo "Creating Security Group ($securityGroupName) for SSH and HTTP access..."
 	securityGroupId=$(aws ec2 create-security-group \
 		--tag-specification 'ResourceType=security-group,Tags=[{Key=Name,Value='$securityGroupName'}]' \
@@ -164,6 +164,7 @@ function createSecurityGroup () {
 		--query GroupId \
 		--output text)
 	if [[ $? != 0 ]]; then
+		echo "Something went wrong."
 		cleanUp
 	else 
 		echo "Done."
@@ -173,19 +174,13 @@ function createSecurityGroup () {
 
 # Allows SSH and HTTP access from anywhere
 function authorizeSecurityGroup () {
-	set +e
 	echo "Authorizing SSH and HTTP access from anywhere..."
 	aws ec2 authorize-security-group-ingress \
 		--group-id $securityGroupId \
 		--protocol tcp \
 		--port 22 \
 		--cidr 0.0.0.0/0 \
-		--output text > /dev/null
-	if [[ $? != 0 ]]; then
-		cleanUp
-	else 
-		echo "SSH access on port 22/tcp is authorized."
-	fi
+		--output text > /dev/null && \
 	aws ec2 authorize-security-group-ingress \
 		--group-id $securityGroupId \
 		--protocol tcp \
@@ -193,16 +188,16 @@ function authorizeSecurityGroup () {
 		--cidr 0.0.0.0/0 \
 		--output text > /dev/null
 	if [[ $? != 0 ]]; then
+		echo "Something went wrong."
 		cleanUp
 	else 
-		echo "HTTP access on port 80/tcp is authorized."
+		echo "Done."
 	fi
 }
 
 
 # Generates SSH Key Pair with the projects's name and makes it only readable by user
 function generateKeyPair () {
-	set +e
 	echo "Generating SSH Key Pair ($sshKeyName)..."
 	aws ec2 create-key-pair \
 		--key-name $sshKeyName \
@@ -210,6 +205,7 @@ function generateKeyPair () {
 		--output text > $sshKeyName.pem && \
 	chmod 400 $sshKeyName.pem
 	if [[ $? != 0 ]]; then
+		echo "Something went wrong."
 		cleanUp
 	else 
 		echo "Done."
@@ -219,7 +215,6 @@ function generateKeyPair () {
 
 # Creates custom EC2 Instance using variables as arguments and assigns the ID to $instanceId and IP to $instancePublicIp
 function createInstance () {
-	set +e
 	echo "Launching EC2 instance with the name ($instanceName) and type ($instanceType)..."
 	instanceId=$(aws ec2 run-instances \
 		--tag-specification 'ResourceType=instance,Tags=[{Key=Name,Value='$instanceName'}]' \
@@ -236,6 +231,7 @@ function createInstance () {
 		grep "PublicIpAddress" | \
 		cut -d '"' -f 4)
 	if [[ $? != 0 ]]; then
+		echo "Something went wrong."
 		cleanUp
 	else 
 		echo "Done."
@@ -245,8 +241,6 @@ function createInstance () {
 
 # Cleans up if something goes wrong
 function cleanUp () {
-	set +e
-	echo "Something went wrong"
 	echo "Cleaning up..."
 	aws ec2 terminate-instances --instance-ids $instanceId --output text > /dev/null
 	aws ec2 wait instance-terminated --instance-ids $instanceId
@@ -353,21 +347,22 @@ function showHelpMenu() {
 }
 
 
+
 if [[ $1 = "--create" ]] && [[ ! -z $projectName ]]
 then
 	if [[ ! -f "$resourceIds" ]]
 	then
-		createVPC
-		createSubnet
-		createInternetGateway
-		attachInternetGatewayToVpc
-		createRouteTable
-		createRoute
-		associateRouteTable
-		createSecurityGroup
-		authorizeSecurityGroup
-		generateKeyPair
-		createInstance
+		createVPC && \
+		createSubnet && \
+		createInternetGateway && \
+		attachInternetGatewayToVpc && \
+		createRouteTable && \
+		createRoute && \
+		associateRouteTable && \
+		createSecurityGroup && \
+		authorizeSecurityGroup && \
+		generateKeyPair && \
+		createInstance && \
 		showResourceIds
 	else
 		echo " "
