@@ -7,7 +7,7 @@ group=Administrators
 password=My!User1Login8P@ssword
 #ADMIN POLICY
 
-policy=arn:aws:iam::aws:policy/AWSMarketplaceFullAccess
+policy=arn:aws:iam::aws:policy/AmazonEC2FullAccess
 
    aws iam create-user \
   --user-name $user   
