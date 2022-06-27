@@ -18,7 +18,7 @@ function generateHtml () {
     window.onload = setupRefresh;
 
     function setupRefresh() {
-      setTimeout("refreshPage();", 60000); // milliseconds
+      setTimeout("refreshPage();", 60000);
     }
     function refreshPage() {
        window.location = location.href;
@@ -27,14 +27,13 @@ function generateHtml () {
 </head>
 <body>
 <div>
-<h3>Ameriabank</h3>' > $indexPath
-    echo -e "<h4>Purchase: 1 USD = $usdBuy AMD</h4>
-<h4>Sale: 1 USD = $usdSell AMD</h4>
-<h5>$currentDate</h5>" >> $indexPath
-    echo -e '</div>
+<h3>Ameriabank</h3>
+<h4>Purchase: 1 USD = '$usdBuy' AMD</h4>
+<h4>Sale: 1 USD = '$usdSell' AMD</h4>
+<h5>'$currentDate'</h5>
+</div>
 </body>
-</html>' >> $indexPath
-
+</html>' > $indexPath
 }
 
 while true

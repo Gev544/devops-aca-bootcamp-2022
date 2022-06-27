@@ -44,16 +44,16 @@ function checkNginx () {
 # Configures Nginx to use custom configuration
 function configureNginx () {
 	echo "Configuring Nginx..."
-	echo -e "server {
+	echo -e 'server {
 	listen 80 default_server;
 	listen [::]:80 default_server;
-	root ${webServerPath};" > /etc/nginx/sites-available/${projectName}.conf && \
-	echo -e '	index index.html;
+	root '$webServerPath';
+		index index.html;
 	server_name _;
 	location / {
 		try_files $uri $uri/ =404;
 	}
-}' >> /etc/nginx/sites-available/${projectName}.conf && \
+}' > /etc/nginx/sites-available/${projectName}.conf && \
 	rm -rf /etc/nginx/sites-enabled/default && \
 	ln -s /etc/nginx/sites-available/${projectName}.conf /etc/nginx/sites-enabled/${projectName}.conf && \
 	rm -rf /var/www/html && \
@@ -65,11 +65,10 @@ function configureNginx () {
 function installAndMountS3 () {
     echo "Installing and configuring s3fs..."
     apt update -y && apt install s3fs -y && \
-    echo $accessKeyIdAndSecret > /etc/.passwd-s3fs && \
-    chmod 400 /etc/.passwd-s3fs && \
-    mkdir -p $webServerPath && chmod 777 $webServerPath && \
-	echo "user_allow_other" >> /etc/fuse.conf && \
-    s3fs ${bucketName}:/ ${webServerPath} -o allow_other -o passwd_file=/etc/.passwd-s3fs -o umask=000 && \
+    echo $accessKeyIdAndSecret > /etc/passwd-s3fs && \
+    chmod 600 /etc/passwd-s3fs && \
+    mkdir -p $webServerPath && \
+    s3fs ${bucketName} ${webServerPath} -o allow_other -o passwd_file=/etc/passwd-s3fs -o umask=000 && \
     echo "Done."
 }
 
@@ -78,16 +77,16 @@ function installAndMountS3 () {
 function setupWebsite () {
 	mkdir -p /opt/${projectName} && \
 	mv /home/${instanceUsername}/${websiteScript} /opt/${projectName}/${websiteScript} && \
-	echo -e "[Unit]
+	echo -e '[Unit]
 Description=ACA Homework June 15 Website
 After=network.target
 
 [Service]
-ExecStart=/opt/${projectName}/${websiteScript}
+ExecStart=/opt/'${projectName}'/'${websiteScript}'
 Restart=on-failure
 
 [Install]
-WantedBy=multi-user.target" > /lib/systemd/system/${projectName}.service && \
+WantedBy=multi-user.targe' > /lib/systemd/system/${projectName}.service && \
 	systemctl start ${projectName}.service && \
 	systemctl restart nginx.service
 }
