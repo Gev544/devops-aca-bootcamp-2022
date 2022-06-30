@@ -1,0 +1,61 @@
+#!/bin/bash
+# This script will create s3 bucket, create and upload index.html to s3
+
+#cleanup if somethig goes wrong
+
+set +e
+
+function cleanup () {
+	aws s3api delete-bucket --bucket aca-bootcamp-narek
+	rm -f $(pwd)/index.html
+	aws s3 rm $(pwd)/index.html s3://aca-bootcamp-narek/index.html
+}
+
+#Create s3 bucket
+S3_URL=$(aws s3api create-bucket --bucket aca-bootcamp-narek --create-bucket-configuration LocationConstraint="us-west-1" --region "us-west-1" --output text)
+if [[ $? != 0 ]];
+then    cleanup
+else
+echo "S3 created"
+fi
+
+#Creating index.html
+
+if [ -f "index.html" ]; then
+    
+	echo "index.html exist" && aws s3api delete-bucket --bucket aca-bootcamp-narek && exit
+else
+    
+echo "<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <title>Hello!</title>
+    </head>
+
+    <body>
+        <h1>Hello World!</h1>
+        <p>This is a simple paragraph.</p>
+    </body>
+
+</html>" > index.html
+if [[ $? != 0 ]];
+then    cleanup
+else
+echo "index.html created"
+fi
+fi
+
+#Upload index.html to s3 bucket
+aws s3 cp $(pwd)/index.html s3://aca-bootcamp-narek/index.html
+if [[ $? != 0 ]];
+then    cleanup
+else
+echo "index.sht copied to s3"
+fi
+# Make index.html public
+aws s3api put-object-acl --bucket aca-bootcamp-narek --key index.html --acl public-read
+
+# Adding sources
+echo "S3_URL=$S3_URL" >> sources.list

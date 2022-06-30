@@ -1,0 +1,176 @@
+#!/bin/bash
+#Thsi script autostart from 'install.sh'
+#This script create all required resources for EC2 instance. And run it. If something goes wrong it will automaticaly delete all generated resources. 
+
+#Cleanup fanction for ec2
+function cleanup () {
+        set +e
+        echo "Cleaning up..."
+	if [ ! -z $INSTANCE_ID ] 
+	then
+        aws ec2 terminate-instances --instance-ids $INSTANCE_ID --output text > /dev/null
+        aws ec2 wait instance-terminated --instance-ids $INSTANCE_ID
+	fi
+	
+        aws ec2 delete-key-pair --key-name $SSHKEY
+        aws ec2 delete-security-group --group-id $CUSTOM_SECURITY_GROUP_ID
+        aws ec2 delete-subnet --subnet-id $SUBNET_ID
+        aws ec2 delete-route-table --route-table-id $ROUTE_TABLE_ID
+ 	Yes 	Assigned 	Yes[12] 	        aws ec2 detach-internet-gateway --internet-gateway-id $INTERNET_GATEWAY_ID --vpc-id $VPC_ID
+        aws ec2 delete-vpc --vpc-id $VPC_ID
+	aws ec2 delete-internet-gateway --internet-gateway-id $INTERNET_GATEWAY_ID
+	rm -f /home/$(whoami)/.ssh/${SSHKEY}.pem
+
+        echo "Done"
+        exit
+}
+
+
+# Create a VPC
+VPC_ID=$(aws ec2 create-vpc --cidr-block '10.0.0.0/16' --query 'Vpc.{VpcId:VpcId}' --output text)
+#Clean error
+if [[ $? != 0 ]]; 
+then 	cleanup 
+else
+echo "VPC created"
+fi
+
+
+# Create a public subnet
+SUBNET_ID=$(aws ec2 create-subnet  --vpc-id $VPC_ID --cidr-block '10.0.1.0/24' --availability-zone us-west-1a --query 'Subnet.{SubnetId:SubnetId}' --output text)
+#Clean error
+if [[ $? != 0 ]];
+then    cleanup
+else
+echo "Subnet created"
+fi
+
+# Enable Auto-assign Public IP on Public Subnet
+aws ec2 modify-subnet-attribute  --subnet-id $SUBNET_ID  --map-public-ip-on-launch
+if [[ $? != 0 ]];
+then    cleanup
+else
+echo "Public IP assigned"
+fi
+
+# Create an Internet Gateway
+INTERNET_GATEWAY_ID=$(aws ec2 create-internet-gateway  --query 'InternetGateway.{InternetGatewayId:InternetGatewayId}'  --output text)
+#Clean error
+if [[ $? != 0 ]];
+then    cleanup
+else
+echo "Gateway created"
+fi
+
+# Attach Internet gateway to your VPC
+aws ec2 attach-internet-gateway --vpc-id $VPC_ID --internet-gateway-id $INTERNET_GATEWAY_ID
+if [[ $? != 0 ]];
+then    cleanup
+else
+echo "Gateway attached"
+fi
+
+# Create a route table
+ROUTE_TABLE_ID=$(aws ec2 create-route-table --vpc-id $VPC_ID --query 'RouteTable.{RouteTableId:RouteTableId}' --output text )
+if [[ $? != 0 ]];
+then    cleanup
+else
+echo "Route table created"
+fi
+
+# Create route to Internet Gateway 
+aws ec2 create-route --route-table-id $ROUTE_TABLE_ID --destination-cidr-block '0.0.0.0/0' --gateway-id $INTERNET_GATEWAY_ID > /dev/null
+if [[ $? != 0 ]];
+then    cleanup
+else
+echo "Route created"
+fi
+
+# Associate the public subnet with route table
+ROUTE_TABLE_ASSOID=$(aws ec2 associate-route-table --subnet-id $SUBNET_ID --route-table-id $ROUTE_TABLE_ID --output text)
+if [[ $? != 0 ]];
+then    cleanup
+else
+echo "Subnet assosiated"
+fi
+
+# Create a security group
+aws ec2 create-security-group --vpc-id $VPC_ID --group-name myvpc-security-group --description 'My VPC non default security group' > /dev/null
+if [[ $? != 0 ]];
+then    cleanup
+else
+echo "Security group created"
+fi
+
+# Get security group ID's
+DEFAULT_SECURITY_GROUP_ID=$(aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" --query 'SecurityGroups[?GroupName == `default`].GroupId' --output text) &&
+CUSTOM_SECURITY_GROUP_ID=$(aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" --query 'SecurityGroups[?GroupName == `myvpc-security-group`].GroupId' --output text)
+if [[ $? != 0 ]];
+then    cleanup
+else
+echo "Security group ID"
+fi
+
+#Create security group ingress rules
+aws ec2 authorize-security-group-ingress --group-id $CUSTOM_SECURITY_GROUP_ID --ip-permissions '[{"IpProtocol": "tcp", "FromPort": 22, "ToPort": 22, "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "Allow SSH"}]}]' && aws ec2 authorize-security-group-ingress --group-id $CUSTOM_SECURITY_GROUP_ID --ip-permissions '[{"IpProtocol": "tcp", "FromPort": 80, "ToPort": 80, "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "Allow HTTP"}]}]'
+if [[ $? != 0 ]];
+then    cleanup
+else
+echo "Security rules created"
+fi
+
+# Add a tag to VPC, subnet, Internet Gateway
+aws ec2 create-tags  --resources $VPC_ID  --tags "Key=Name,Value=myvpc"
+aws ec2 create-tags --resources $SUBNET_ID --tags "Key=Name,Value=myvpc-public-subnet"
+aws ec2 create-tags --resources $INTERNET_GATEWAY_ID --tags "Key=Name,Value=myvpc-internet-gateway"
+if [[ $? != 0 ]];
+then    cleanup
+else
+echo "Tags added"
+fi
+
+# Generate ssh key
+SSHKEY="sshkeygenerated"
+aws ec2 create-key-pair --key-name $SSHKEY --query "KeyMaterial" --output text > /home/$(whoami)/.ssh/$SSHKEY.pem && chmod 400 /home/$(whoami)/.ssh/$SSHKEY.pem
+if [[ $? != 0 ]];
+then    cleanup
+else
+echo "SSH generated"
+fi
+
+# Launch EC2 instance
+INSTANCE_ID=$( aws ec2 run-instances --tag-specification 'ResourceType=instance,Tags=[{Key=Name,Value='EC2_Instance'}]' --image-id 'ami-085284d24fe829cd0' --instance-type 't2.micro' --key-name $SSHKEY --security-group-ids $CUSTOM_SECURITY_GROUP_ID	--subnet-id $SUBNET_ID | grep "InstanceId" | cut -d '"' -f 4)
+if [[ $? != 0 ]];
+then    cleanup
+else
+echo "EC2 instance launched"
+fi
+
+# Get public IP
+PUBLIC_IP=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID"  | grep PublicIpAddress | cut -d '"' -f 4
+)
+
+# Adding sources
+echo "PUBLIC_IP=$PUBLIC_IP INSTANCE_ID=$INSTANCE_ID SSHKEY=$SSHKEY CUSTOM_SECURITY_GROUP_ID=$CUSTOM_SECURITY_GROUP_ID SUBNET_ID=$SUBNET_ID ROUTE_TABLE_ID=$ROUTE_TABLE_ID INTERNET_GATEWAY_ID=$INTERNET_GATEWAY_ID VPC_ID=$VPC_ID" >> sources.list
+       
+#SSH to ec2
+#ssh -o StrictHostKeyChecking=no -i /home/$(whoami)/.ssh/sshkeygenerated.pem ubuntu@$PUBLIC_IP
+#sleep 5
+#ssh ubuntu@$PUBLIC_IP echo "Hello World"
+
+
+
+# Delete custom security group
+#aws ec2 delete-security-group --group-id $CUSTOM_SECURITY_GROUP_ID
+
+# Delete internet gateway
+#aws ec2 detach-internet-gateway --internet-gateway-id $INTERNET_GATEWAY_ID --vpc-id $VPC_ID && aws ec2 delete-internet-gateway --internet-gateway-id $INTERNET_GATEWAY_ID
+
+# Delete the custom route table
+#aws ec2 disassociate-route-table --association-id $ROUTE_TABLE_ASSOID && aws ec2 delete-route-table --route-table-id $CUSTOM_ROUTE_TABLE_ID
+
+# Delete the public subnet
+#aws ec2 delete-subnet --subnet-id $SUBNET_PUBLIC_ID
+
+# Delete the vpc
+#aws ec2 delete-vpc --vpc-id $VPC_ID
