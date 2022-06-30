@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Installing nginx ufw wget
+sudo apt update
+sudo apt install -y nginx wget s3fs
+sudo systemctl start nginx
+sudo systemctl enable nginx
+
+# Removing nginx default index.html
+sudo rm -rf /var/www/html/*
+
+# Downloading default index.html from AWS S3 bucket
+sudo wget https://myvpc-s3.s3.amazonaws.com/index.html
+
+# Copying index.html to nginx root directory
+sudo mv ./index.html /var/www/html/
+
+# Restart nginx
+sudo systemctl reload -s nginx
