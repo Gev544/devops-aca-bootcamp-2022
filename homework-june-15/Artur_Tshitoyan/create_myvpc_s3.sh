@@ -300,11 +300,6 @@ aws ec2 create-tags --resources $AWS_EC2_INSTANCE_ID --tags "Key=Name,Value=myvp
 
 echo "Added Tags to Created Resources"
 
-## Delete public files from S3 bucket and localhost
-#delete_S3_objects && \
-#rm -f index.html nginx.conf && \
-#echo "All files are deleted from s3 bucket" | tee -a ./myvpc.log
-
 ## Create s3fullaccess iam user
 create_myvpcs3user
 if  [[ ! -z $ACCESS_KEY_ID ]]
@@ -314,10 +309,3 @@ echo "IAM s3 user successfuly created with Credentials and s3fullaccess" | tee -
 else
 delete_myvpcs3user
 fi
-
-## uploading files to s3 bucket
-#Upload_refresh_index_to_bucket
-#aws s3api wait object-exists \
-#--bucket $AWS_S3 \
-#--key refresh_index.sh && \
-#echo "refresh_index file uploaded to s3 bucket successfully"
