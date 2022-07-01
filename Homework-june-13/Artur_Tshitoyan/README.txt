@@ -1,3 +1,3 @@
-!!! For create myvpc run create_myvpc.sh
+1. To create custom VPC in AWS run create_myvpc.sh. it will create custom VPC with enabled DNS, Internet Gateway, Subnet, Route table associated with subnet to provide access to intenet gateway. Also script will create custom security group with ssh and http access rules and ec2 instance that will use current security group. Access key pair for created instance will be created in current directory. Also there would be log file about creating process and txt file which will contains ids for all created resources.
 
-!!! For delete myvpc run delete_myvpc.sh !!! Do this step only if myvpc already created !!!
+2. To cleanup all created resources run delete_myvpc.sh. Do this step only if 1st step already done.
