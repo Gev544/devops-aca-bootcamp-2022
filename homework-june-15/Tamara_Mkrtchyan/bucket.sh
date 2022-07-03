@@ -12,8 +12,12 @@ option=$1
 name=$2
 bucketName="$name-bucket-aca"
 bucketRegion="us-east-1"
-aclValue="public-read"
+bucketAcl="read"
+objectAcl="public-read"
 objectName="index.html"
+iamUserName="$name-user"
+iamUserPermission="arn:aws:iam::aws:policy/AmazonS3FullAccess"
+iamUserCredentials="$iamUserName-credentials.csv"
 
 # deletes all objects in given s3 bucket
 delete_objects () {
@@ -26,9 +30,9 @@ delete_objects () {
 			aws s3api wait object-not-exists --bucket $bucketName --key $obj
 			echo -e "${Red}$obj file from s3 is deleted${Reset}"
 		done
-# deletes the temporary file
-		rm ./s3_obj_list
 	fi
+# deletes the temporary file
+	rm ./s3_obj_list
 }
 
 # deletes the prevously created bucket
@@ -55,6 +59,7 @@ check_for_error () {
 		if [[ -f $objectName ]]; then
 			rm -f $objectName
 		fi
+		delete_user
 		exit 1
 	fi
 }
@@ -63,7 +68,7 @@ check_for_error () {
 # if that name already exist in selected region then it prints corresponding error message
 create_bucket () {
 	bucketUrl=$(aws s3api create-bucket \
-			--acl $aclValue \
+			--acl $bucketAcl \
 			--bucket $bucketName \
 			--region $bucketRegion)
 	return_value=$?
@@ -116,11 +121,54 @@ create_html () {
 </html>" > $objectName
 }
 
+# creating IAM user
+create_user () {
+	echo "Creating IAM user ($iamUserName)..."
+	aws iam create-user \
+		--user-name $iamUserName \
+		--permissions-boundary $iamUserPermission \
+		--output text > /dev/null
+	aws iam attach-user-policy \
+		--user-name $iamUserName \
+		--policy-arn $iamUserPermission
+	check_for_error "creating iam user"
+	echo -e "${Green}$iamUserName user created successfully !${Reset}"
+}
+
+# deleting IAM user
+delete_user () {
+	echo "Deleting IAM user ($iamUserName)..."
+	aws iam delete-user \
+		--user-name $iamUserName && \
+	echo -e "${Red}$iamUserName user deleted successfully !${Reset}"
+}
+
+# creating Access Key for IAM user
+create_accesskey () {
+	aws iam create-access-key \
+		--user-name $iamUserName \
+		--output text > $iamUserCredentials && \
+	iamUserAccessKeyId=$(cat $iamUserCredentials | cut -d "	" -f 2) && \
+	iamUserAccessKeySecret=$(cat $iamUserCredentials | cut -d "	" -f 4) && \
+	check_for_error "creating access key for iam user"
+	echo -e "${Green}$iamUserName user access key created successfully !${Reset}"
+}
+
+# deleting Access Key of IAM user
+delete_accesskey () {
+	iamUserAccessKeyId=$(cat $iamUserCredentials | cut -d "	" -f 2) && \
+	aws iam delete-access-key \
+		--user-name $iamUserName \
+		--access-key-id $iamUserAccessKeyId && \
+	rm -f $iamUserCredentials && \
+	echo -e "${Red}$iamUserName user access key deleted successfully !${Reset}"
+}
+
 # uploading the index.html file to our new bucket
 upload_file () {
 	aws s3api put-object \
 		--bucket $bucketName \
-		--acl $aclValue \
+		--acl $objectAcl \
 		--key $objectName \
 		--body $objectName \
 		--content-language html \
@@ -148,7 +196,6 @@ create_ec2 () {
 # deleting created ec2 instance with its resouces and unsetting created variables
 delete_ec2 () {
 	./aws_ec2.sh --delete $name
-	unset ec2User ec2Id ec2PublicIp ec2RemoteScript
 }
 
 # this function copies remote working script to ec2 instance via scp and executes it via ssh
@@ -177,18 +224,23 @@ config_ec2 () {
 	check_for_error "executing remote script in ec2 inastance"
 }
 
+
 # the script starts here
 if [[ $option == "--create" ]] && [[ ! -z $name ]]; then
 	create_bucket && \
 	create_html && \
 	upload_file && \
+	create_user && \
+	create_accesskey && \
 	create_ec2 && \
 	config_ec2
 elif [[ $option == "--delete" ]] && [[ ! -z $name ]]; then
 	delete_objects && \
 	delete_bucket && \
-	delete_ec2
-	unset option name bucketName bucketRegion bucketUrl aclValue objectName objectUrl
+	delete_ec2 && \
+	delete_user && \
+	delete_accesskey && \
+	rm index.html
 else
 	echo -e "${Red}Argument Error. Must be${Reset}"
 	echo -e "./bucket.sh --create <name>"
