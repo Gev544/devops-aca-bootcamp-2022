@@ -8,14 +8,9 @@ set +e
 echo 'mounting Bucket'
 mkdir ~/s3bucket
 mkdir ~/.aws
-echo '[default]
-region=us-west-1
-output=json
-' > ~/.aws/config
-echo '[default]
-aws_access_key_id = AKIAW5HGA7HEBYCDBRHH
-aws_secret_access_key = 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
-' > ~/.aws/credentials
+mv  ~/congig ~/.aws/config
+mv ~/credentials ~/.aws/credentials
+
 sudo apt update -y
 sudo apt install s3fs -y
 s3fs aca-bootcamp-narek ~/s3bucket

@@ -12,12 +12,21 @@ bash ./s3
 echo 's3 script ended'
 #Run script to launch ec2
 bash ./ec2
+
+
+#Adding information aws config and cred
+#echo "awsconfig=$(cat ~/.aws/config)" >> sources.list
+#echo "awscredentials=$(cat ~/.aws/credentials)" >> sources.list
+
 source sources.list 2>/dev/null
 echo "$PUBLIC_IP instance launched"
 sleep 10
 set +e
 #Run remote commands
 echo 'start ssh part' | ssh -o StrictHostKeyChecking=no -i /home/narek/.ssh/sshkeygenerated.pem  ubuntu@$PUBLIC_IP 'sudo bash -s'
+
+scp -o StrictHostKeyChecking=no -i /home/narek/.ssh/sshkeygenerated.pem /home/narek/.aws/config ubuntu@$PUBLIC_IP:/home/ubuntu
+scp -o StrictHostKeyChecking=no -i /home/narek/.ssh/sshkeygenerated.pem /home/narek/.aws/credentials ubuntu@$PUBLIC_IP:/home/ubuntu
 cat ./nginx | ssh -o StrictHostKeyChecking=no -i /home/narek/.ssh/sshkeygenerated.pem  ubuntu@$PUBLIC_IP 'sudo bash -s' 2>&1
 
 
