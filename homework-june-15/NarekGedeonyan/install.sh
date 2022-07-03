@@ -12,10 +12,16 @@ bash ./s3
 echo 's3 script ended'
 #Run script to launch ec2
 bash ./ec2
+source sources.list 2>/dev/null
 echo "$PUBLIC_IP instance launched"
-
+sleep 10
+set +e
 #Run remote commands
-cat ./nginx | ssh -o StrictHostKeyChecking=no -i /home/narek/.ssh/sshkeygenerated.pem  ubuntu@$PUBLIC_IP 'sudo bash -s' 2>./logs
+echo 'start ssh part' | ssh -o StrictHostKeyChecking=no -i /home/narek/.ssh/sshkeygenerated.pem  ubuntu@$PUBLIC_IP 'sudo bash -s'
+cat ./nginx | ssh -o StrictHostKeyChecking=no -i /home/narek/.ssh/sshkeygenerated.pem  ubuntu@$PUBLIC_IP 'sudo bash -s' 2>&1
+
+
+
 #cat ./testfile	| ssh -o StrictHostKeyChecking=no -i /home/narek/.ssh/sshkeygenerated.pem  ubuntu@$PUBLIC_IP 'sudo bash -s' 2>./logs
 
 

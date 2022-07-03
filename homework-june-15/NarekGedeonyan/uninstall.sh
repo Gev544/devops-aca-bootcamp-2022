@@ -23,6 +23,7 @@ rm -f /home/$(whoami)/.ssh/${SSHKEY}.pem
 echo "#!/bin/bash" >sources.list
 echo "Done"
 # s3
+aws s3 rm s3://aca-bootcamp-narek --recursive
 aws s3api delete-bucket --bucket aca-bootcamp-narek
 rm -f $(pwd)/index.html
 aws s3 rm $(pwd)/index.html s3://aca-bootcamp-narek/index.html

@@ -2,20 +2,38 @@
 source sources.list 2>/dev/null
 
 #Sudo?
-set -e
+set +e
 
-echo "Checking nginx"
+#Mounting bucket
+echo 'mounting Bucket'
+mkdir ~/s3bucket
+mkdir ~/.aws
+echo '[default]
+region=us-west-1
+output=json
+' > ~/.aws/config
+echo '[default]
+aws_access_key_id = AKIAW5HGA7HEBYCDBRHH
+aws_secret_access_key = 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
+' > ~/.aws/credentials
+sudo apt update -y
+sudo apt install s3fs -y
+s3fs aca-bootcamp-narek ~/s3bucket
+
+echo 's3 mounted'
+
+#echo "Checking nginx"
 
 #Check nginx and install
-nginx -v 2>/dev/null
-if [[ ! $? = 0 ]] ;  
-then apt-get update -y 
+#nginx -v 2>/dev/null
+#if [[ ! $? = 0 ]] ;  
+#then apt-get update -y 
 
-	sleep 10
-apt-get install -y nginx 
+#	sleep 10
+apt-get install nginx -y
 
 sleep 10
-fi
+#fi
 NGINX_STATUS=$(systemctl show nginx.service --property=ActiveState | sed s/ActiveState=//)
 if [[  $NGINX_STATUS = "active"  ]];
 then    echo "Nginx is active"
