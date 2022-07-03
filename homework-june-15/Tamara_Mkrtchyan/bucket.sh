@@ -147,7 +147,7 @@ create_ec2 () {
 
 # deleting created ec2 instance with its resouces and unsetting created variables
 delete_ec2 () {
-	./aws_ec2 --delete $name
+	./aws_ec2.sh --delete $name
 	unset ec2User ec2Id ec2PublicIp ec2RemoteScript
 }
 
@@ -189,4 +189,8 @@ elif [[ $option == "--delete" ]] && [[ ! -z $name ]]; then
 	delete_bucket && \
 	delete_ec2
 	unset option name bucketName bucketRegion bucketUrl aclValue objectName objectUrl
+else
+	echo -e "${Red}Argument Error. Must be${Reset}"
+	echo -e "./bucket.sh --create <name>"
+	echo -e "./bucket.sh --delete <name>"
 fi

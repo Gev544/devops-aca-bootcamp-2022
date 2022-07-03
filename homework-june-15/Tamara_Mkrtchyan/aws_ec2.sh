@@ -226,7 +226,7 @@ elif [[ $option = "--delete" ]] && [[ ! -z $name ]]; then
 	if [[ -f "$name-ids" ]]; then
 		delete_all
 	else
-		echo -e "${Red}There is no $name to delete${Reset}"
+		echo -e "${Red}There is no $name instance to delete${Reset}"
 	fi
 else
 	echo -e "${Red}Argument Error. Must be${Reset}"
