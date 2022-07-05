@@ -1,5 +1,6 @@
 ### notice
 ```
+Install aws cli on your ubuntu and login with your aws user credentials !
 You should have aws user with turned off -Block Public Access settings for this account- !
 ```
 
