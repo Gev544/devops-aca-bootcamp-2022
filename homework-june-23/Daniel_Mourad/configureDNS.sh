@@ -1,8 +1,10 @@
 #!/bin/bash
 
-domainName=""
+projectName=$2
+resourceIds="${projectName}-resources.txt"
+domainName="${projectName}"
 recordConfigFile="route53config.json"
-instancePublicIp=
+instancePublicIp=$(grep "ip-" $resourceIds | cut -d "-" -f 2)
 
 # Creates DNS record with the public ip of EC2 Instance
 function createRecord () {
@@ -46,3 +48,9 @@ function deleteRecord () {
 	rm -f ${recordConfigFile} && \
 	echo "Done."
 }
+
+if [[ $1 = "--add-record" ]]; then
+    createRecord
+elif [[ $1 = "--remove-record" ]]; then
+    deleteRecord
+fi
