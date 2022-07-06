@@ -1,5 +1,5 @@
 # #!/bin/bash
-        
+
 echo "start..."
 
 #Create a S3 Bucket
@@ -183,7 +183,9 @@ function generateKeyPair() {
 	fi
 }
 
-    function nginx {
+    #information about amd to dollar
+    function rate {
+    while true ; do
         var=$(curl --silent rate.am | grep -A 3 ameria | tail -2 | sed 's/<\/*[^>]*>//g')
         now=$(date)
 
@@ -191,9 +193,10 @@ function generateKeyPair() {
         echo "<meta http-equiv="refresh" content="10">" >> index.html
 
         
-        sleep 8
-    }
+        sleep 10
+        done
 
+    }
 
 #create ec2 instance
 function createAwsEc2Instance() { 
@@ -224,15 +227,14 @@ function createAwsEc2Instance() {
 	scp -i EC2Key.pem index.html ubuntu@$instancePublicIp:/var/www/html/index.html
     ssh -i EC2Key.pem ubuntu@$instancePublicIp "sudo apt update && sudo apt install nginx && sudo mv nginx.conf /etc/nginx/sites-enabled/" 
 
-	echo "$instancePublicIp"
     }
 
+    
     function systemd () {
       ssh -i EC2Key.pem ubuntu@$instancePublicIp "sudo chown ubuntu:ubuntu /usr/bin"
       ssh -i EC2Key.pem ubuntu@$instancePublicIp "sudo chown ubuntu:ubuntu /etc/systemd/system/"
       scp -i EC2Key.pem rateInfo.sh ubuntu@$instancePublicIp:/usr/bin
       scp -i EC2Key.pem rateInfo.service ubuntu@$instancePublicIp:/etc/systemd/system/
-
       ssh -i EC2Key.pem ubuntu@$instancePublicIp "sudo systemctl daemon-reload && sudo systemctl start rateInfo.service && sudo systemctl status rateInfo.service"
     }
 
@@ -244,8 +246,8 @@ function createAwsEc2Instance() {
             --permissions-boundary arn:aws:iam::aws:policy/AmazonS3FullAccess \
             --output text)
 
-      AWS_IAM_Access_Key=$(aws iam create-access-key \
-      --user-name aca-devops > iam_user)
+        AWS_IAM_Access_Key=$(aws iam create-access-key \
+        --user-name aca-devops > iam_user)
 
         AWS_IAM_User_Id=$(cat iam_user | grep AccessKeyId | awk '{print $2 }' | tr -d "," | tr -d '"')
         AWS_IAM_User_Secret_Access_Key=$(cat iam_user | grep SecretAccessKey | awk '{print $2 }' | tr -d "," | tr -d '"')
@@ -254,7 +256,7 @@ function createAwsEc2Instance() {
 
     #mount s3 bucket to ec2 instance
     function mount () {
-        ssh -i EC2Key.pem ubuntu@34.239.180.81 "sudo apt update  && \
+        ssh -i EC2Key.pem ubuntu@$instancePublicIp "sudo apt update  && \
         sudo apt-get install s3fs && \
         sudo touch /etc/passwd-s3fs
         sudo chown ubuntu:ubuntu /etc/passwd-s3fs && \
@@ -265,8 +267,12 @@ function createAwsEc2Instance() {
         sudo cp /etc/passwd-s3fs ~/.passwd_s3fs && \
         sudo chmod 640 ~/.passwd_s3fs && \
         sudo chmod 640 /etc/passwd_s3fs && \
-        s3fs bucket-devops-aca.s3 /home/ubuntu/emtyDirectory -o passwd_file=${HOME}/.passwd_s3fs  -o use_path_request_style"
+        s3fs my-first-aca-devops /home/ubuntu/emtyDirectory -o passwd_file=${HOME}/.passwd_s3fs  -o use_path_request_style"
      }
+
+    function copyIndextoMountDirectory {
+        ssh -i EC2Key.pem ubuntu@$instancePublicIp "cp /var/www/html/index.html /home/ubuntu/emtyDirectory/"
+    }
 
 function start () {
 	createS3Bucket
@@ -283,11 +289,12 @@ function start () {
     openSSH
     generateKeyPair
     reateAwsEc2Instance
-    nginx
+    rate
     mount
+    copyIndextoMountDirectory
 }
 
-start
+#start
 
 function cleanUp () {
     ## Delete custom security group
