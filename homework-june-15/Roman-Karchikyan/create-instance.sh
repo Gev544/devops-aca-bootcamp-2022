@@ -81,7 +81,10 @@ aws ec2 authorize-security-group-ingress \
 --ip-permissions '[{"IpProtocol": "tcp", "FromPort": 22, "ToPort": 22, "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "Allow SSH"}]}]' &&
 aws ec2 authorize-security-group-ingress \
 --group-id $SEC_GROUP_ID \
---ip-permissions '[{"IpProtocol": "tcp", "FromPort": 80, "ToPort": 80, "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "Allow HTTP"}]}]' || echo "Security rules didn't created"
+--ip-permissions '[{"IpProtocol": "tcp", "FromPort": 80, "ToPort": 80, "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "Allow HTTP"}]}]' &&
+aws ec2 authorize-security-group-ingress \
+--group-id $SEC_GROUP_ID \
+--ip-permissions '[{"IpProtocol": "tcp", "FromPort": 443, "ToPort": 443, "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "Allow HTTP"}]}]' || echo "Security rules didn't created"
 
 # Create key pair
 KEY_PAIR="ubuntu-server-key-1"
@@ -154,7 +157,7 @@ function ssh-instance ()
     scp -i $KEY_PAIR.pem -r Project_X ubuntu@$INSTANCE_PUB_IP:/home/ubuntu/Project_X
     scp -i $KEY_PAIR.pem passwd-s3fs ubuntu@$INSTANCE_PUB_IP:/home/ubuntu/passwd-s3fs
     rm passwd-s3fs
-    ssh -i $KEY_PAIR.pem ubuntu@$INSTANCE_PUB_IP "./nginx.sh"
+    ssh -i $KEY_PAIR.pem ubuntu@$INSTANCE_PUB_IP "./nginx.sh $BName"
 }
 
 function get-instance-stat ()

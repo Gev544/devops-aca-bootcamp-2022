@@ -28,9 +28,11 @@ sudo mv passwd-s3fs /etc/passwd-s3fs
 # Mount & auto remount when reboot
 mkdir myS3Bucket
 sudo mv myS3Bucket/ /myS3Bucket/
-s3fs site-demo-1 -o use_cache=/tmp -o allow_other -o uid=1001 -o mp_umask=002 -o multireq_max=5 /myS3Bucket
-echo '/usr/local/bin/s3fs site-demo-1 -o use_cache=/tmp -o allow_other -o uid=1001 -o mp_umask=002 -o multireq_max=5 /myS3Bucket' | sudo tee --append /etc/rc.local
+s3fs $1 -o use_cache=/tmp -o allow_other -o uid=1001 -o mp_umask=002 -o multireq_max=5 /myS3Bucket
 sudo mv Project_X/ /myS3Bucket/Project_X
+
+# Create systemd service to autoremount
+echo -e "s3fs#$1 /myS3Bucket fuse _netdev,allow_other,passwd_file=/etc/passwd-s3fs 0 0" | sudo tee --append /etc/fstab
 
 # Nginx config 
 echo "server {

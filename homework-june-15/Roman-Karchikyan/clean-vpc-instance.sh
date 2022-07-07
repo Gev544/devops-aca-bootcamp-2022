@@ -16,8 +16,8 @@ then
     get-instance-stat
     
     # Waiting to be able to terminate & terminating this instance
-    if [ "$INSTANCE_STATUS" = "running" || "$INSTANCE_STATUS" = "stopped" ||
-         "$INSTANCE_STATUS" = "pending" || "$INSTANCE_STATUS" = "shutting-down" ]
+    if [ "$INSTANCE_STATUS" = "running" ] || [ "$INSTANCE_STATUS" = "stopped" ] ||
+       [ "$INSTANCE_STATUS" = "pending" ] || [ "$INSTANCE_STATUS" = "shutting-down" ]
     then
 
         echo "Terminating the Instance, please wait..."
