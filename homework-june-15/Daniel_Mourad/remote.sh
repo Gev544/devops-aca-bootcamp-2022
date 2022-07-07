@@ -82,7 +82,7 @@ Description=ACA Homework June 15 Website
 After=network.target
 
 [Service]
-ExecStart=/opt/'${projectName}'/'${websiteScript}'
+ExecStart=/opt/'${projectName}'/'${websiteScript} $webServerPath'
 Restart=on-failure
 
 [Install]

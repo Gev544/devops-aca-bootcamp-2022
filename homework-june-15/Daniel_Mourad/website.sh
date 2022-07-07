@@ -1,19 +1,23 @@
 #!/bin/bash
 
-indexPath="/var/www/aca-homework/index.html"
+# This script fetches USD/AMD rate from rate.am and updates it every minute
+# It requires web server path as argument
 
-function generateHtml () {
-    usdBuy=$(curl -s https://rate.am | grep -A 3 "ameriabank" | tail -2 | grep -o '[0-9]*' | head -1)
-    usdSell=$(curl -s https://rate.am | grep -A 3 "ameriabank" | tail -2 | grep -o '[0-9]*' | tail -1)
-    currentDate=$(date +"%A %B %d %Y | %H:%M")
-    echo -e '<!DOCTYPE html>
+webServerPath=$1
+
+while true; do
+
+usdBuy=$(curl -s https://rate.am | grep -A 3 "ameriabank" | tail -2 | grep -o '[0-9]*' | head -1)
+usdSell=$(curl -s https://rate.am | grep -A 3 "ameriabank" | tail -2 | grep -o '[0-9]*' | tail -1)
+currentDate=$(date +"%A %B %d %Y | %H:%M")
+echo -e '<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="refresh" content="30;url=index.html">
-<title>ACA Homework</title>
+<title>USD/AMD Rate</title>
 <script type="text/javascript">
     window.onload = setupRefresh;
 
@@ -33,13 +37,7 @@ function generateHtml () {
 <h5>'$currentDate'</h5>
 </div>
 </body>
-</html>' > $indexPath
-}
-
-while true
-do
-
-generateHtml
+</html>' > ${webServerPath}/index.html
 
 sleep 60
 
