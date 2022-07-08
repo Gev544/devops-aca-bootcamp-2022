@@ -1,0 +1,21 @@
+Homework will continue the last one (june-15)
+
+Warning Note!!!
+
+ALB is not free tier eligable, so use them as less as it is possible to not generate bills on your account. Also 2nd ec2 instance is not free. Use this not free resoursec only while deploying and testing.
+
+
+Intro: generate letsencrypt certificates manually, save them in s3 bucket with key,download them to ec2 instances with script, so the manual part will be certificate creation, and automation part for point 3. will be downloading already generated ssl and key for your website.
+Dont think about security of your ssl and key, they are temporary and not encrypting any secsitive information, just rate of dollar in armenia :) 
+
+
+https://www.digitalocean.com/community/tutorials/how-to-secure-apache-with-let-s-encrypt-on-ubuntu-20-04
+
+1. Use the ec2 instance with website from june-15 homework
+2. Create dns record with your subdomain which will pass request to ec2 instance
+2. On ec2 instance use letsencrypt ssl certificate for your subdomain, and also put the ssl renew script in crontab
+3. Use website from last homework and configure nginx to work with 443 port with ssl certificates and redirect all http traffic to https with nginx configs
+*4.Create aws ALB make targets with 80 443 ports and forward them to ec2 instance with same ports
+*5.Change dns record with your subdomain which will pass request to ALB you have created instead of ec2 instance
+*5. enable HA for your website, which mean you must have identic 2 ec2 instances under ALB and they should return the exactly same output in the same time
+*6. Use Jenkins for this deployment, which will pull 2 separate repos(in this case you need to pull same repo's separate branches), use website part from 1st repo, use june-23 homework part from 2nd!
