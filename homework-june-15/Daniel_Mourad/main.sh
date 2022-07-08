@@ -254,7 +254,7 @@ function cleanUp () {
 if [[ $1 = "--create" ]]; then
     createBucket && \
     generateHtml && \
-    uploadObject && \
+    #uploadObject && \
     createUser && \
     createAccessKey && \
     runInstance && \
