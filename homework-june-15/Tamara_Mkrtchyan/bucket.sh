@@ -7,16 +7,17 @@ Yellow='\033[0;33m'
 Blue='\033[0;34m'
 Reset='\033[0m'
 
-# initiating variables for bucket and objects
+# initiating variables for bucket, objects, iam
 option=$1
 name=$2
 bucketName="$name-bucket-aca"
 bucketRegion="us-east-1"
-bucketAcl="read"
+bucketAcl="public-read"
 objectAcl="public-read"
 objectName="index.html"
+rateam_script="rateam.sh"
 iamUserName="$name-user"
-iamUserPermission="arn:aws:iam::aws:policy/AmazonS3FullAccess"
+iamPolicyArn="arn:aws:iam::aws:policy/AmazonS3FullAccess"
 iamUserCredentials="$iamUserName-credentials.csv"
 
 # deletes all objects in given s3 bucket
@@ -75,8 +76,8 @@ create_bucket () {
 # error 254 triggers if selected bucket name already exists
 	if [[ $return_value == 254 ]]; then
 		echo -e "${Red}The requested bucket name is not available.\n\
-		The bucket namespace is shared by all users of the system.\n\
-		Please select a different name and try again.${Reset}"
+\	\	The bucket namespace is shared by all users of the system.\n\
+\	\	Please select a different name and try again.${Reset}"
 		exit 1
 	elif [[ $return_value != 0 ]]; then
 		echo -e "${Red}An error occured while creating the bucket\nerror: $?${Reset}"
@@ -123,21 +124,23 @@ create_html () {
 
 # creating IAM user
 create_user () {
-	echo "Creating IAM user ($iamUserName)..."
 	aws iam create-user \
 		--user-name $iamUserName \
-		--permissions-boundary $iamUserPermission \
+		--permissions-boundary $iamPolicyArn \
 		--output text > /dev/null
 	aws iam attach-user-policy \
 		--user-name $iamUserName \
-		--policy-arn $iamUserPermission
+		--policy-arn $iamPolicyArn
 	check_for_error "creating iam user"
 	echo -e "${Green}$iamUserName user created successfully !${Reset}"
 }
 
 # deleting IAM user
 delete_user () {
-	echo "Deleting IAM user ($iamUserName)..."
+	aws iam detach-user-policy \
+		--user-name $iamUserName \
+		--policy-arn $iamPolicyArn && \
+	sleep 5 && \
 	aws iam delete-user \
 		--user-name $iamUserName && \
 	echo -e "${Red}$iamUserName user deleted successfully !${Reset}"
@@ -203,27 +206,36 @@ config_ec2 () {
 	ec2User="ubuntu"
 	ec2Id=$(grep "i-" $name-ids)
 	ec2PublicIp=$(aws ec2 describe-instances \
-	--instance-id $instanceId \
-	--query 'Reservations[*].Instances[*].PublicIpAddress' \
-	--output text)
+		--instance-id $instanceId \
+		--query 'Reservations[*].Instances[*].PublicIpAddress' \
+		--output text)
 	ec2RemoteScript="remote_nginx_conf.sh"
 # add ec2 host key to our known hosts file (ssh-keyscan)
-	ssh-keyscan $ec2publicIp >> ~/.ssh/known_hosts
-	check_for_error "keyscanning the ec2 public ip to known hosts"
-# copy nginx installation and configuration script to ec2 (scp)
+	ssh-keyscan $ec2PublicIp >> ~/.ssh/known_hosts 2>/dev/null
+	check_for_error "keyscanning the ec2 public ip $ec2PublicIp to known hosts"
+# installing java
+	ssh -i $name-keypair.pem $ec2User@$ec2PublicIp "sudo apt install openjdk-11-jre -y" > /dev/null
+	check_for_error "installing java to instance"
+# copy nginx installation and web page configuration script to ec2 (scp)
 	scp -i $name-keypair.pem $ec2RemoteScript \
-		$ec2User@$ec2PublicIp:/home/$ec2User/$ec2RemoteScript
+		$ec2User@$ec2PublicIp:/home/$ec2User/$ec2RemoteScript >/dev/null
 	check_for_error "copying remote script to ec2 instance"
+	echo -e "${Green}$ec2RemoteScript copied successfully !${Reset}"
+	scp -i $name-keypair.pem $rateam_script \
+		$ec2User@$ec2PublicIp:/home/$ec2User/$rateam_script >/dev/null
+	check_for_error "copying web script to ec2 instance"
+	echo -e "${Green}$rateam_script copied successfully !${Reset}"
 # download index.html on instance
 	ssh -i $name-keypair.pem $ec2User@$ec2PublicIp \
 		wget $objectUrl
 	check_for_error "downloading html file from s3 bucket to ec2 instance via wget"
 # run the nginx installation and configuration script
 	ssh -i $name-keypair.pem $ec2User@$ec2PublicIp \
-		sudo bash /home/$ec2User/$ec2RemoteScript
+		"sudo bash /home/$ec2User/$ec2RemoteScript \
+		$name $ec2User $rateam_script $bucketName \
+		$iamUserAccessKeyId:$iamUserAccessKeySecret"
 	check_for_error "executing remote script in ec2 inastance"
 }
-
 
 # the script starts here
 if [[ $option == "--create" ]] && [[ ! -z $name ]]; then
@@ -238,8 +250,8 @@ elif [[ $option == "--delete" ]] && [[ ! -z $name ]]; then
 	delete_objects && \
 	delete_bucket && \
 	delete_ec2 && \
-	delete_user && \
 	delete_accesskey && \
+	delete_user && \
 	rm index.html
 else
 	echo -e "${Red}Argument Error. Must be${Reset}"
