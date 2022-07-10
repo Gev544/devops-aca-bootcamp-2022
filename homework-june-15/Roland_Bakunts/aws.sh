@@ -183,7 +183,6 @@ function generateKeyPair() {
 	fi
 }
 
-    #information about amd to dollar
     function rate {
     while true ; do
         var=$(curl --silent rate.am | grep -A 3 ameria | tail -2 | sed 's/<\/*[^>]*>//g')
@@ -192,10 +191,8 @@ function generateKeyPair() {
         echo "<h1>show usd/amd price from rate.am for Ameria Bank </h1> <h2>$var</h2> <span>"$now" </span>" >> index.html
         echo "<meta http-equiv="refresh" content="10">" >> index.html
 
-        
         sleep 10
         done
-
     }
 
 #create ec2 instance
@@ -223,9 +220,9 @@ function createAwsEc2Instance() {
         fi
            	
 	#download file on ec2 instance
-    ssh -i EC2Key.pem ubuntu@$instancePublicIp "sudo chown ubuntu:ubuntu /var/www/html"
-	scp -i EC2Key.pem index.html ubuntu@$instancePublicIp:/var/www/html/index.html
-    ssh -i EC2Key.pem ubuntu@$instancePublicIp "sudo apt update && sudo apt install nginx && sudo mv nginx.conf /etc/nginx/sites-enabled/" 
+    ssh -i instance_Aws.pem ubuntu@$instancePublicIp "sudo chown ubuntu:ubuntu /var/www/html"
+	scp -i instance_Aws.pem index.html ubuntu@$instancePublicIp:/var/www/html/index.html
+    ssh -i instance_Aws.pem ubuntu@$instancePublicIp "sudo apt update && sudo apt install nginx && sudo mv nginx.conf /etc/nginx/sites-enabled/" 
 
     }
 
@@ -238,7 +235,7 @@ function createAwsEc2Instance() {
       ssh -i EC2Key.pem ubuntu@$instancePublicIp "sudo systemctl daemon-reload && sudo systemctl start rateInfo.service && sudo systemctl status rateInfo.service"
     }
 
-    # create IAM
+    # create IAM user with full access to s3 bucket
     function createIAM () {
 
         AWS_Create_IAM=$(aws iam create-user \
@@ -252,26 +249,28 @@ function createAwsEc2Instance() {
         AWS_IAM_User_Id=$(cat iam_user | grep AccessKeyId | awk '{print $2 }' | tr -d "," | tr -d '"')
         AWS_IAM_User_Secret_Access_Key=$(cat iam_user | grep SecretAccessKey | awk '{print $2 }' | tr -d "," | tr -d '"')
 
+        echo "IAM user is created"
 }
 
     #mount s3 bucket to ec2 instance
     function mount () {
         ssh -i EC2Key.pem ubuntu@$instancePublicIp "sudo apt update  && \
         sudo apt-get install s3fs && \
-        sudo touch /etc/passwd-s3fs
-        sudo chown ubuntu:ubuntu /etc/passwd-s3fs && \
-        sudo echo $AWS_IAM_User_Id:$AWS_IAM_User_Secret_Access_Key > /etc/passwd-s3fs && \
-        sudo chown 600 /etc/passwd_s3fs  && \
-        sudo mkdir -p /var/www/aca_devops_bootcamp && \
-        sudo chown -R ubuntu:ubuntu /var/www/aca_devops_bootcamp && \
-        sudo cp /etc/passwd-s3fs ~/.passwd_s3fs && \
-        sudo chmod 640 ~/.passwd_s3fs && \
-        sudo chmod 640 /etc/passwd_s3fs && \
-        s3fs my-first-aca-devops /home/ubuntu/emtyDirectory -o passwd_file=${HOME}/.passwd_s3fs  -o use_path_request_style"
+        sudo touch /home/ubuntu/.s3fs-creds
+        sudo chown ubuntu:ubuntu /home/ubuntu/.s3fs-creds && \
+        sudo echo $AWS_IAM_User_Id:$AWS_IAM_User_Secret_Access_Key > /home/ubuntu/.s3fs-creds && \
+        sudo chown 600 /home/ubuntu/.s3fs-creds  && \
+        sudo mkdir -p  /home/ubuntu/s3_uploads && \
+        s3fs my-first-aca-devops /home/ubuntu/s3_uploads -o passwd_file=/home/ubuntu/.s3fs-creds -o use_path_request_style"
+
+        echo "s3 bucket is mounted"
      }
 
+    #copy index.html file to mountpoint
     function copyIndextoMountDirectory {
-        ssh -i EC2Key.pem ubuntu@$instancePublicIp "cp /var/www/html/index.html /home/ubuntu/emtyDirectory/"
+        ssh -i instance_Aws.pem ubuntu@34.251.86.193 "cp /var/www/html/index.html /home/ubuntu/emtyDirectory/"
+
+        echo "index.html file is copied"
     }
 
 function start () {
@@ -294,7 +293,7 @@ function start () {
     copyIndextoMountDirectory
 }
 
-#start
+start
 
 function cleanUp () {
     ## Delete custom security group
@@ -321,6 +320,5 @@ function cleanUp () {
     ## Delete the vpc
     aws ec2 delete-vpc \
 }
-
 
 echo "succesfull..."
