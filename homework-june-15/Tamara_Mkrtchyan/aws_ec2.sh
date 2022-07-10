@@ -44,7 +44,7 @@ delete_all () {
 		echo -e "${Red}SSH Key Pair is deleted${Reset}"
 	fi
 
-	if [[ ! -z $sgid ]]; then
+	if [[ ! -z $sgId ]]; then
 		aws ec2 delete-security-group --group-id $sgId && \
 		echo -e "${Red}Security Group is deleted${Reset}"
 	fi
@@ -73,9 +73,6 @@ delete_all () {
 	rm -f $name-ids && \
 	echo -e "${Red}Temporary files are deleted${Reset}"
 	unset vpcId subnetId igwId rtbId sgId instanceId publicIp name option
-	echo -e "${Green}----------------------------------${Reset}"
-	echo -e "${Green}THANK YOU FOR USING OUR SERVICES:)${Reset}"
-	echo -e "${Green}----------------------------------${Reset}"
 }
 
 create_ec2 () {
