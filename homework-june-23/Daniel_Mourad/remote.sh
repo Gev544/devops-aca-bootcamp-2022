@@ -62,6 +62,15 @@ function configureNginx () {
 }
 
 
+# Installs certbot and configures nginx for https
+function configureHttps () {
+	echo "Installing Certbot..."
+	apt install certbot python3-certbot-nginx -y && \
+	certbot --nginx --register-unsafely-without-email --agree-tos --redirect -d $domainName && \
+	echo "Done."
+}
+
+
 # Installs s3fs and configures access key
 function installAndMountS3 () {
     echo "Installing and configuring s3fs..."
@@ -98,5 +107,5 @@ if [[ $USER != root ]]
 then    
     echo "Permission denied: run script as root"
 else
-	installNginx && checkNginx && configureNginx && installAndMountS3 && setupWebsite
+	installNginx && checkNginx && configureNginx && configureHttps && installAndMountS3 && setupWebsite
 fi 
