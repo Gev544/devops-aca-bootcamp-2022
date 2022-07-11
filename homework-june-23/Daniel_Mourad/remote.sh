@@ -58,6 +58,7 @@ function configureNginx () {
 	rm -rf /etc/nginx/sites-enabled/default && \
 	ln -s /etc/nginx/sites-available/${projectName}.conf /etc/nginx/sites-enabled/${projectName}.conf && \
 	rm -rf /var/www/html && \
+	mkdir -p $webServerPath && \
 	echo "Done."
 }
 
@@ -77,7 +78,6 @@ function installAndMountS3 () {
     apt update -y && apt install s3fs -y && \
     echo $accessKeyIdAndSecret > /etc/passwd-s3fs && \
     chmod 600 /etc/passwd-s3fs && \
-    mkdir -p $webServerPath && \
     s3fs ${bucketName} ${webServerPath} -o allow_other -o passwd_file=/etc/passwd-s3fs -o umask=000 && \
     echo "Done."
 }
@@ -107,5 +107,5 @@ if [[ $USER != root ]]
 then    
     echo "Permission denied: run script as root"
 else
-	installNginx && checkNginx && configureNginx && configureHttps && installAndMountS3 && setupWebsite
+	installNginx && checkNginx && configureNginx && setupWebsite
 fi 
