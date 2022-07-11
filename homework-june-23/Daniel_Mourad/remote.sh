@@ -5,9 +5,6 @@
 projectName=$1
 instanceUsername=$2
 websiteScript=$3
-bucketName=$4
-accessKeyIdAndSecret=$5
-domainName=$6
 webServerPath="/var/www/${projectName}"
 
 
@@ -58,33 +55,13 @@ function configureNginx () {
 	rm -rf /etc/nginx/sites-enabled/default && \
 	ln -s /etc/nginx/sites-available/${projectName}.conf /etc/nginx/sites-enabled/${projectName}.conf && \
 	rm -rf /var/www/html && \
-	mkdir -p $webServerPath && \
-	echo "Done."
-}
-
-
-# Installs certbot and configures nginx for https
-function configureHttps () {
-	echo "Installing Certbot..."
-	apt install certbot python3-certbot-nginx -y && \
-	certbot --nginx --register-unsafely-without-email --agree-tos --redirect -d $domainName && \
-	echo "Done."
-}
-
-
-# Installs s3fs and configures access key
-function installAndMountS3 () {
-    echo "Installing and configuring s3fs..."
-    apt update -y && apt install s3fs -y && \
-    echo $accessKeyIdAndSecret > /etc/passwd-s3fs && \
-    chmod 600 /etc/passwd-s3fs && \
-    s3fs ${bucketName} ${webServerPath} -o allow_other -o passwd_file=/etc/passwd-s3fs -o umask=000 && \
-    echo "Done."
+	mkdir -p $webServerPath
 }
 
 
 # Makes website script to work as a daemon
 function setupWebsite () {
+	echo "Creating systemd daemon..."
 	mkdir -p /opt/${projectName} && \
 	mv /home/${instanceUsername}/${websiteScript} /opt/${projectName}/${websiteScript} && \
 	echo -e '[Unit]
@@ -96,7 +73,8 @@ ExecStart=/opt/'${projectName}'/'${websiteScript} ${webServerPath}'
 Restart=on-failure
 
 [Install]
-WantedBy=multi-user.targe' > /lib/systemd/system/${projectName}.service && \
+WantedBy=multi-user.targe' > /etc/systemd/system/${projectName}.service && \
+	systemctl daemon-reload && \
 	systemctl start ${projectName}.service && \
 	systemctl restart nginx.service
 }
@@ -107,5 +85,8 @@ if [[ $USER != root ]]
 then    
     echo "Permission denied: run script as root"
 else
-	installNginx && checkNginx && configureNginx && setupWebsite
+	installNginx && \
+	checkNginx && \
+	configureNginx && \
+	setupWebsite
 fi 
