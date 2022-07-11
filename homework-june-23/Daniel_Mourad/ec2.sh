@@ -26,7 +26,7 @@ securityGroupName="${projectName}-security-group"
 instanceName="${projectName}-instance"
 instanceImageId="ami-02584c1c9d05efa69"
 instanceType="t2.micro"
-instanceCount="1"
+instanceCount="2"
 
 # SSH Key Pair related variables
 sshKeyName="${projectName}-ec2-key"
