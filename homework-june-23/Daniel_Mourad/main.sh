@@ -74,7 +74,7 @@ function deleteBucket () {
 # Generates simple Hello World! html file
 function generateHtml () {
     echo "Generating ($objectName)..."
-    echo -e "<!DOCTYPE html>
+    echo -e '<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -85,7 +85,7 @@ function generateHtml () {
 <body>
     <h1>Hello World!</h1>
 </body>
-</html>" > $objectName
+</html>' > $objectName
     if [[ $? != 0 ]]; then
         echo "Something went wrong."
         cleanUp
@@ -274,6 +274,7 @@ function deleteRecord () {
 
 # Copies remote script and runs on remote server and downloads object from S3 on remote
 function runRemote () {
+    instancePublicIp=$1
     echo "Adding EC2 host key to known_hosts..." && \
     ssh-keyscan $instancePublicIp >> ~/.ssh/known_hosts 2> /dev/null && \
     echo "Copying ($remoteScript) and ($websiteScript) to remote EC2 Instance..." && \
@@ -320,8 +321,11 @@ if [[ $1 = "--create" ]]; then
     createAccessKey && \
     runInstance && \
     createRecord && \
-    runRemote && \
-    bash ec2.sh --show-resources $projectName
+    instancePublicIp=$(grep "ip-" $resourceIds | cut -d "-" -f 2) && \
+    runRemote $instancePublicIp && \
+    instancePublicIp=$(grep -A 2 "ip-" $resourceIds | tail -1) && \
+    runRemote $instancePublicIp
+#   bash ec2.sh --show-resources $projectName
 elif [[ $1 = "--delete" ]]; then
     deleteObject && \
     deleteBucket && \
