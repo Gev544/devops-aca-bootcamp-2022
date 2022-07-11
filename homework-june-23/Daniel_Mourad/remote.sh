@@ -7,6 +7,7 @@ instanceUsername=$2
 websiteScript=$3
 bucketName=$4
 accessKeyIdAndSecret=$5
+domainName=$6
 webServerPath="/var/www/${projectName}"
 
 

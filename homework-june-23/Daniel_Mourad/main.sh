@@ -286,7 +286,8 @@ function runRemote () {
         "sudo bash /home/${instanceUsername}/${remoteScript} \
             ${projectName} ${instanceUsername} \
             ${websiteScript} ${bucketName} \
-            ${iamUserAccessKeyId}:${iamUserAccessKeySecret}"
+            ${iamUserAccessKeyId}:${iamUserAccessKeySecret} \
+            ${domainName}"
     if [[ $? != 0 ]]; then
         echo "Something went wrong."
         cleanUp
@@ -303,8 +304,9 @@ function cleanUp () {
     aws s3api delete-bucket --bucket $bucketName --region $bucketRegion
     rm -f $objectName
     aws iam delete-access-key --user-name $iamUserName --access-key-id $iamUserAccessKeyId
+    rm -f $iamUserCredentials
     aws iam delete-user --user-name $iamUserName
-    bash configureDNS.sh --delete-record $projectName
+    deleteRecord
     bash ec2.sh --delete $projectName
     echo "Done."
     exit 1
@@ -314,7 +316,6 @@ function cleanUp () {
 
 if [[ $1 = "--create" ]]; then
     createBucket && \
-    generateHtml && \
     createUser && \
     createAccessKey && \
     runInstance && \

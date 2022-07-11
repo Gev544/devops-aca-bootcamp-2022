@@ -155,7 +155,7 @@ function associateRouteTable () {
 
 # Creates Security Group with projects's name in VPC and assigns the ID to $securityGroupId
 function createSecurityGroup () {
-	echo "Creating Security Group ($securityGroupName) for SSH and HTTP access..."
+	echo "Creating Security Group ($securityGroupName) for SSH, HTTP and HTTPS access..."
 	securityGroupId=$(aws ec2 create-security-group \
 		--tag-specification 'ResourceType=security-group,Tags=[{Key=Name,Value='$securityGroupName'}]' \
     	--group-name SSH-HTTP-HTTPS-Access \
@@ -174,7 +174,7 @@ function createSecurityGroup () {
 
 # Allows SSH and HTTP access from anywhere
 function authorizeSecurityGroup () {
-	echo "Authorizing SSH and HTTP access from anywhere..."
+	echo "Authorizing SSH, HTTP and HTTPS access from anywhere..."
 	aws ec2 authorize-security-group-ingress \
 		--group-id $securityGroupId \
 		--protocol tcp \
