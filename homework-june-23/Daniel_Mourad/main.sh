@@ -132,7 +132,7 @@ if [[ $1 = "--create" ]]; then
     runInstances && \
     instancePublicIp=$(grep "ip-" $resources | cut -d "-" -f 2) && \
     runRemote $instancePublicIp && \
-    instancePublicIp=$(grep -A 2 "ip-" $resources | tail -1) && \
+    instancePublicIp=$(grep -A 1 "ip-" $resources | tail -1) && \
     runRemote $instancePublicIp && \
     bash ec2.sh --show-resources $projectName
 elif [[ $1 = "--delete" ]]; then

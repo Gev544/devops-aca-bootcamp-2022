@@ -38,6 +38,9 @@ instanceImageId="ami-02584c1c9d05efa69"
 instanceType="t2.micro"
 instanceCount="2"
 
+# Target Group related variables
+targetGroupName="${projectName}-target-group"
+
 # Resources file name
 resources="${projectName}-resources.txt"
 
@@ -233,7 +236,7 @@ function deleteKeyPair () {
 
 
 # Creates EC2 Instance using variables as arguments and assigns the ID to $instanceId and IP to $instancePublicIp
-function createInstance () {
+function createInstances () {
 	echo "Launching ($instanceType) EC2 Instances ($instanceName)..."
 	instanceId=$(aws ec2 run-instances \
 		--tag-specification 'ResourceType=instance,Tags=[{Key=Name,Value='$instanceName'}]' \
@@ -252,12 +255,37 @@ function createInstance () {
 }
 
 # Deletes EC2 Instance and waits until it is terminated
-function terminateInstance () {
+function terminateInstances () {
     instanceId=$(grep "i-" $resources)
     echo "Terminating EC2 instances ($instanceName)..."
 	aws ec2 terminate-instances --instance-ids $instanceId --output text > /dev/null
 	echo "Waiting for the termination of EC2 instance ($instanceName)..."
 	aws ec2 wait instance-terminated --instance-ids $instanceId
+}
+
+
+# Creates Target Group and registers Instances
+function createTargetGroup () {
+	echo "Creating Target Group ($targetGroupName) and registering targets..."
+	targetGroupArn=$(aws elbv2 create-target-group \
+		--name $targetGroupName \
+		--protocol HTTP \
+		--port 80 \
+		--target-type instance \
+		--vpc-id $vpcId |
+ 		grep "TargetGroupArn" | cut -d '"' -f 4 | tee -a $resources) && \
+	aws elbv2 register-targets \
+		--target-group-arn $targetGroupArn \
+		--targets \
+		Id=$(grep "i-" aca-homework-resources.txt | head -1),Port=80 \
+		Id=$(grep "i-" aca-homework-resources.txt | tail -1),Port=80
+}
+
+# Deletes Target Group
+function deleteTargetGroup () {
+	targetGroupArn=$(grep "targetgroup" $resources)
+	echo "Deleting Target Group ($targetGroupName)..."
+	aws elbv2 delete-target-group --target-group-arn $targetGroupArn
 }
 
 
@@ -273,7 +301,8 @@ function showResources () {
 	echo "Instance A ID -> $(grep "i-" $resources | head -1)"
 	echo "Instance B ID -> $(grep "i-" $resources | tail -1)"
 	echo "Instance A Public IPv4 Address -> $(grep "ip-" $resources | cut -d "-" -f 2)"
-	echo "Instance A Public IPv4 Address -> $(grep -A 2 "ip-" $resources | tail -1)"
+	echo "Instance B Public IPv4 Address -> $(grep -A 1 "ip-" $resources | tail -1)"
+	echo "Target Group ARN -> $(grep "targetgroup" $resources)"
 	echo " "
 }
 
@@ -281,7 +310,8 @@ function showResources () {
 # Cleans up if something goes wrong
 function cleanUp () {
 	echo "Something went wrong, cleaning up..."
-    terminateInstance
+	deleteTargetGroup
+    terminateInstances
     deleteKeyPair
     deleteSecurityGroup
     deleteSubnets
@@ -307,7 +337,8 @@ if [[ $1 = "--create" ]] && [[ ! -z $projectName ]]; then
 		createSecurityGroup && \
 		authorizeSecurityGroup && \
 		generateKeyPair && \
-    	createInstance && \
+    	createInstances && \
+		createTargetGroup && \
 		showResources
 		if [[ $? != 0 ]]; then
 			cleanUp
@@ -322,7 +353,8 @@ if [[ $1 = "--create" ]] && [[ ! -z $projectName ]]; then
 	fi
 elif [[ $1 = "--delete" ]] && [[ ! -z $projectName ]]; then
 	if [[ -f "$resources" ]]; then
-		terminateInstance && \
+		deleteTargetGroup && \
+		terminateInstances && \
     	deleteKeyPair && \
     	deleteSecurityGroup && \
     	deleteSubnets && \
