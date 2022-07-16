@@ -13,10 +13,6 @@ instanceUsername="ubuntu"
 remoteScript="remote.sh"
 websiteScript="website.sh"
 
-# Route 53
-domainName="${projectName}.$(cat hostedZone.txt)"
-recordConfigFile="route53config.json"
-
 
 
 # Creates VPC, Subnet, Internet Gateway, Route Table, Security Group and Ubuntu EC2 Instance

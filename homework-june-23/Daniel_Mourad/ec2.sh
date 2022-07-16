@@ -45,6 +45,10 @@ targetGroupName="${projectName}-target-group"
 loadBalancerName="${projectName}-load-balancer"
 certificateArn=$(cat certificatearn.txt)
 
+# Route 53 related variables
+domainName="${projectName}.$(cat hostedZone.txt)"
+recordConfigFile="route53config.json"
+
 # Resources file name
 resources="${projectName}-resources.txt"
 
@@ -320,6 +324,50 @@ function deleteLoadBalancer () {
 }
 
 
+# Creates CNAME record in Route 53 pointing to Load Balancer
+function createRecord () {
+	loadbalancerDnsName=$(aws elbv2 describe-load-balancers --load-balancer-arns $loadBalancerArn | grep "DNSName" | cut -d '"' -f 4) && \
+    echo "Creating DNS Record ($domainName)..." && \
+	echo -e '{
+   "Comment": "Create CNAME record ",
+   "Changes": [{
+   "Action": "UPSERT",
+               "ResourceRecordSet": {
+                           "Name": "'$domainName'",
+                           "Type": "CNAME",
+                           "TTL": 300,
+                        "ResourceRecords": [{ "Value": "'$loadbalancerDnsName'"}]
+}}]
+}' > ${recordConfigFile} && \
+	aws route53 change-resource-record-sets \
+		--hosted-zone-id $(aws route53 list-hosted-zones --output yaml | grep "Id" | cut -d "/" -f 3) \
+		--change-batch file://${recordConfigFile} --output text > /dev/null && \
+	rm -f ${recordConfigFile}
+}
+
+# Deletes CNAME record from Route 53 which points to Load Balancer
+function deleteRecord () {
+	loadBalancerArn=$(grep "loadbalancer" $resources) && \
+	loadbalancerDnsName=$(aws elbv2 describe-load-balancers --load-balancer-arns $loadBalancerArn | grep "DNSName" | cut -d '"' -f 4) && \
+    echo "Deleting DNS Record ($domainName)..." && \
+	echo -e '{
+   "Comment": "Delete CNAME record ",
+   "Changes": [{
+   "Action": "DELETE",
+               "ResourceRecordSet": {
+                           "Name": "'$domainName'",
+                           "Type": "CNAME",
+                           "TTL": 300,
+                        "ResourceRecords": [{ "Value": "'$loadbalancerDnsName'"}]
+}}]
+}' > ${recordConfigFile} && \
+	aws route53 change-resource-record-sets \
+		--hosted-zone-id $(aws route53 list-hosted-zones --output yaml | grep "Id" | cut -d "/" -f 3) \
+		--change-batch file://${recordConfigFile} --output text > /dev/null && \
+	rm -f ${recordConfigFile}
+}
+
+
 # Shows available resources of the project
 function showResources () {
 	echo " "
@@ -335,6 +383,7 @@ function showResources () {
 	echo "Instance B Public IPv4 Address -> $(grep -A 1 "ip-" $resources | tail -1)"
 	echo "Target Group ARN -> $(grep "targetgroup" $resources)"
 	echo "Load Balancer ARN -> $(grep "loadbalancer" $resources)"
+	echo "Domain Name -> $domainName"
 	echo " "
 }
 
@@ -342,6 +391,7 @@ function showResources () {
 # Cleans up if something goes wrong
 function cleanUp () {
 	echo "Something went wrong, cleaning up..."
+	deleteRecord
 	deleteLoadBalancer
 	deleteTargetGroup
     terminateInstances
@@ -373,7 +423,7 @@ if [[ $1 = "--create" ]] && [[ ! -z $projectName ]]; then
     	createInstances && \
 		createTargetGroup && \
 		createLoadBalancer && \
-		showResources
+		createRecord
 		if [[ $? != 0 ]]; then
 			cleanUp
 		else
@@ -387,8 +437,9 @@ if [[ $1 = "--create" ]] && [[ ! -z $projectName ]]; then
 	fi
 elif [[ $1 = "--delete" ]] && [[ ! -z $projectName ]]; then
 	if [[ -f "$resources" ]]; then
+		deleteRecord && \
 		deleteLoadBalancer && \
-		sleep 30 && \
+		sleep 10 && \
 		deleteTargetGroup && \
 		terminateInstances && \
     	deleteKeyPair && \
