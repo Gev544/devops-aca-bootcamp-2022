@@ -1,0 +1,9 @@
+#!/bin/bash
+
+DATE=$(date +%D_%T)
+
+sudo yum update -y
+sudo yum install -y httpd
+sudo systemctl start httpd
+sudo systemctl enable httpd
+echo "myvpc was created at "$DATE > /var/www/html/index.html
