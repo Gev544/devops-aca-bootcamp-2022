@@ -41,6 +41,10 @@ instanceCount="2"
 # Target Group related variables
 targetGroupName="${projectName}-target-group"
 
+# Load Balancer related variables
+loadBalancerName="${projectName}-load-balancer"
+certificateArn=$(cat certificatearn.txt)
+
 # Resources file name
 resources="${projectName}-resources.txt"
 
@@ -289,6 +293,33 @@ function deleteTargetGroup () {
 }
 
 
+# Creates Load Balancer
+function createLoadBalancer () {
+	echo "Creating Application Load Balancer ($loadBalancerName)..."
+	loadBalancerArn=$(aws elbv2 create-load-balancer \
+		--name $loadBalancerName \
+		--subnets $subnetAId $subnetBId \
+		--security-groups $securityGroupId |
+ 		grep "LoadBalancerArn" | cut -d '"' -f 4 | tee -a $resources) && \
+	aws elbv2 create-listener \
+		--load-balancer-arn $loadBalancerArn \
+		--protocol HTTPS --port 443  \
+		--certificates CertificateArn=$certificateArn \
+		--default-actions Type=forward,TargetGroupArn=${targetGroupArn} > /dev/null && \
+	aws elbv2 create-listener \
+		--load-balancer-arn $loadBalancerArn \
+		--protocol HTTP --port 80  \
+		--default-actions '[{"Type": "redirect", "RedirectConfig": {"Protocol": "HTTPS", "Port": "443", "Host": "#{host}", "Query": "#{query}", "Path": "/#{path}", "StatusCode": "HTTP_301"}}]' > /dev/null
+}
+
+# Deletes Load Balancer
+function deleteLoadBalancer () {
+	loadBalancerArn=$(grep "loadbalancer" $resources)
+	echo "Deleting Application Load Balancer ($loadBalancerName)..."
+	aws elbv2 delete-load-balancer --load-balancer-arn $loadBalancerArn
+}
+
+
 # Shows available resources of the project
 function showResources () {
 	echo " "
@@ -303,6 +334,7 @@ function showResources () {
 	echo "Instance A Public IPv4 Address -> $(grep "ip-" $resources | cut -d "-" -f 2)"
 	echo "Instance B Public IPv4 Address -> $(grep -A 1 "ip-" $resources | tail -1)"
 	echo "Target Group ARN -> $(grep "targetgroup" $resources)"
+	echo "Load Balancer ARN -> $(grep "loadbalancer" $resources)"
 	echo " "
 }
 
@@ -310,6 +342,7 @@ function showResources () {
 # Cleans up if something goes wrong
 function cleanUp () {
 	echo "Something went wrong, cleaning up..."
+	deleteLoadBalancer
 	deleteTargetGroup
     terminateInstances
     deleteKeyPair
@@ -339,6 +372,7 @@ if [[ $1 = "--create" ]] && [[ ! -z $projectName ]]; then
 		generateKeyPair && \
     	createInstances && \
 		createTargetGroup && \
+		createLoadBalancer && \
 		showResources
 		if [[ $? != 0 ]]; then
 			cleanUp
@@ -353,6 +387,8 @@ if [[ $1 = "--create" ]] && [[ ! -z $projectName ]]; then
 	fi
 elif [[ $1 = "--delete" ]] && [[ ! -z $projectName ]]; then
 	if [[ -f "$resources" ]]; then
+		deleteLoadBalancer && \
+		sleep 30 && \
 		deleteTargetGroup && \
 		terminateInstances && \
     	deleteKeyPair && \
