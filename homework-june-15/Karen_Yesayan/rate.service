@@ -1,0 +1,3 @@
+[Service]
+ExecStart=/home/kyesayan/for_index.html.sh
+Restart=on-failure
