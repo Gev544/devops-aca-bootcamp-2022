@@ -1,0 +1,12 @@
+[Unit]
+Description=aca_devops
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /usr/bin/rateInfo.sh
+Restart=on-failure
+
+
+[Install]
+WantedBy=multi-user.target
