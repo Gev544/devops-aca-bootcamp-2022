@@ -45,7 +45,7 @@ delete_all () {
 		echo -e "${Red}SSH Key Pair is deleted${Reset}"
 	fi
 
-	if [[ ! -z $sgid ]]; then
+	if [[ ! -z $sgId ]]; then
 		aws ec2 delete-security-group --group-id $sgId && \
 		echo -e "${Red}Security Group is deleted${Reset}"
 	fi
@@ -119,7 +119,7 @@ create_ec2 () {
 	check_for_error "attaching Internet Gateway to the VPC"
 
 # Creating a custom route table for our VPC
-	rtbId=$(aws ec2 crete-route-table \
+	rtbId=$(aws ec2 create-route-table \
 				--tag-specification 'ResourceType=route-table,Tags=[{Key=Name,Value='$name-rtb'}]' \
 				--vpc-id ${vpcId} \
 				--query RouteTable.RouteTableId \
