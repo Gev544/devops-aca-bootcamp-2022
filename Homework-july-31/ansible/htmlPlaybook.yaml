@@ -1,0 +1,10 @@
+---
+- hosts: all
+  become: true
+
+  tasks:
+    - copy:
+        src: /Users/rolandbakunc/Desktop/devops-aca-bootcamp-2022/homework-june-15/index.nginx-debian.html
+        dest: /var/www/html/index.nginx-debian.html
+        owner: devops
+        mode: '0644'

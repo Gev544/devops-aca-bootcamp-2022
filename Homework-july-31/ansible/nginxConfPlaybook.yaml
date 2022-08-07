@@ -1,0 +1,10 @@
+---
+- hosts: all
+  become: true
+
+  tasks:
+    - copy:
+        src: /Users/rolandbakunc/Desktop/devops-aca-bootcamp-2022/homework-june-15/nginx.conf
+        dest: /etc/nginx/sites-enabled/default
+        owner: devops
+        mode: '0644'
