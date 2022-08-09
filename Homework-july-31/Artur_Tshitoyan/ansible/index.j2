@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>
+</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {background-color:#ffffff;background-repeat:no-repeat;background-position:top left;background-attachment:fixed;}
+h1{text-align:center;font-family:Times, serif;color:#289f61;background-color:#ffffff;}
+p {text-align:center;font-family:Times, serif;font-size:22px;font-style:italic;font-weight:bold;color:#070808;background-color:#ffffff;}
+</style>
+</head>
+<body>
+<h1></h1>
+<p>This page is genereted by ansible</p>
+Server Host Name: {{ ansible_hostname }}<br>
+Server OS Family is: {{ ansible_os_family }}<br>
+IP Adress of this Server is: {{ ansible_default_ipv4.address }}<br>
+</body>
+</html>
+

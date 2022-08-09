@@ -1,0 +1,54 @@
+---
+- name: install nginx to servers
+  hosts: aws
+  become: yes
+
+  vars:
+    conf_file: ./nginx.conf
+    conf_dir: /etc/nginx/sites-enabled/
+    index_file: ./index.j2
+    index_dir: /home/ubuntu/
+    
+  tasks:
+  - block: # For Debian OS
+      #- name: Get the Session Manager plugin
+      #  ansible.builtin.shell:
+      #    cmd: curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
+
+      #- name: Install the Session Manager plugin
+      #  ansible.builtin.shell:
+      #    cmd: dpkg -i session-manager-plugin.deb
+      
+      - name: Install ssm agent with option --classic
+        community.general.snap:
+          name: amazon-ssm-agent
+          state: present
+          classic: yes
+
+      - name: install nginx on ubuntu
+        apt: name=nginx state=latest
+
+      - name: Start and enable nginx service on Ubuntu
+        service: name=nginx state=started enabled=yes
+
+      - name: Copy index file
+        copy: src={{ conf_file }} dest={{ conf_dir }}/nginx.conf
+
+      - name: Remove nginx default conf file
+        ansible.builtin.file:
+          path: /{{ conf_dir }}/default
+          state: absent
+
+      - name: Check nginx conf file
+        ansible.builtin.shell:
+          cmd: nginx -t
+          
+      - name: Generate index file
+        template: src={{ index_file }} dest={{ index_dir }}/index.html
+        notify: Restart nginx
+    when: ansible_os_family == "Debian"
+    
+  handlers:
+  - name: Restart nginx
+    service: name=nginx state=restarted
+    when: ansible_os_family == "Debian"
