@@ -2,6 +2,11 @@ provider "aws" {
     region = var.aws_region
 }
 
+provider "aws" {
+    alias  = "us-east-1"
+    region = "us-east-1"
+}
+
 terraform {
 backend "s3" {
     bucket = "myvpc-s3-state"
@@ -231,3 +236,17 @@ resource "aws_s3_bucket_acl" "b" {
   acl    = "private"
 }
 
+resource "aws_s3_object" "s3index" {
+  bucket = aws_s3_bucket.b.id
+  key    = "index.html"
+  acl    = "public-read"
+  source = "./index.html"
+  content_type = "text/html"
+}
+
+resource "aws_s3_bucket_website_configuration" "my_website" {
+ bucket = aws_s3_bucket.b.id
+ index_document {
+   suffix = "index.html"
+ }
+}
