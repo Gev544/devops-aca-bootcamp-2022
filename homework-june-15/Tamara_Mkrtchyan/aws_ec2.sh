@@ -7,14 +7,13 @@ Yellow='\033[0;33m'       # Yellow
 Blue='\033[0;34m'         # Blue
 Reset='\033[0m'           # Text Reset
 
-command=$1
+option=$1
 name=$2
 
 # this function is being called after every command to check for a return value
 # if the return value is not success then it deletes previously created all resources
 check_for_error () {
-	return_value=$(echo $?)
-	if [[ $return_value != 0 ]]; then
+	if [[ $? != 0 ]]; then
 		echo -e "${Yellow}An error occured while $1\nshould delete everything now${Reset}"
 		delete_all "error"
 		exit 1
@@ -45,7 +44,7 @@ delete_all () {
 		echo -e "${Red}SSH Key Pair is deleted${Reset}"
 	fi
 
-	if [[ ! -z $sgid ]]; then
+	if [[ ! -z $sgId ]]; then
 		aws ec2 delete-security-group --group-id $sgId && \
 		echo -e "${Red}Security Group is deleted${Reset}"
 	fi
@@ -73,9 +72,7 @@ delete_all () {
 
 	rm -f $name-ids && \
 	echo -e "${Red}Temporary files are deleted${Reset}"
-	echo -e "${Green}----------------------------------${Reset}"
-	echo -e "${Green}THANK YOU FOR USING OUR SERVICES:)${Reset}"
-	echo -e "${Green}----------------------------------${Reset}"
+	unset vpcId subnetId igwId rtbId sgId instanceId publicIp name option
 }
 
 create_ec2 () {
@@ -198,9 +195,9 @@ create_ec2 () {
 
 # Getting the public IP
 	publicIp=$(aws ec2 describe-instances \
-			--instance-id $instanceId | \
-			grep "PublicIpAddress" | \
-			cut -d '"' -f 4)  && \
+			--instance-id $instanceId \
+			--query 'Reservations[*].Instances[*].PublicIpAddress' \
+			--output text) && \
 			echo -e "${Yellow}Your Public IP is ${publicIp}${Reset}"
 
 	echo -e "${Blue}---------------------------------------------------${Reset}"
@@ -216,17 +213,17 @@ create_ec2 () {
 }
 
 # the program starts here
-if [[ $command = "--create" ]] && [[ ! -z $name ]]; then
+if [[ $option = "--create" ]] && [[ ! -z $name ]]; then
 	if [[ -f "$name-ids" ]]; then
 		echo -e "${Red}${name} already exists${Reset}"
 	else
 		create_ec2
 	fi
-elif [[ $command = "--delete" ]] && [[ ! -z $name ]]; then
+elif [[ $option = "--delete" ]] && [[ ! -z $name ]]; then
 	if [[ -f "$name-ids" ]]; then
 		delete_all
 	else
-		echo -e "${Red}There is no $name to delete${Reset}"
+		echo -e "${Red}There is no $name instance to delete${Reset}"
 	fi
 else
 	echo -e "${Red}Argument Error. Must be${Reset}"
