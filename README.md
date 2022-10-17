@@ -2,7 +2,7 @@
 This repo is created for student od ACA Devops Bootcamp 2022 to upload their projects, homeworks etc...
 
 
-Rules of exploatation
+Rules of exploatation:
 
 
     clone the repo 1.1 if you already have the repo, do the git pull
