@@ -1,0 +1,36 @@
+---
+- name: Install Apache and upload my webpage
+  hosts: aws
+  become: yes
+
+  tasks:
+  - name: Check OS family
+    debug: var=ansible_os_family
+
+  - name: Install Apache Web for Debian
+    apt: name=nginx state=latest
+ 
+  - name: Start webserver and enable for Debian
+    service: name=nginx state=started enabled=yes
+
+  - name: Copy nginx.conf
+    copy: src=./nginx/nginx.conf dest=/etc/nginx/sites-enabled/
+    notify: 
+      - Restart Nginx for Debian
+
+  - name: install SSM if UBUNTU
+    ansible.builtin.snap: 
+        name: amazon-ssm-agent 
+        state: present
+        classic: yes
+    notify: Start ssm-agent
+
+
+  handlers:
+  - name: Restart Nginx for Debian
+    service: name=nginx state=restarted
+    when: ansible_os_family == "Debian"
+
+  - name: Start ssm-agent
+    service: name=snap.amazon-ssm-agent.amazon-ssm-agent.service state=started
+    when: ansible_os_family == "Debian" 
